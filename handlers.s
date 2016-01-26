@@ -2,13 +2,13 @@
 .global start
 start:
 	;@ Set interrupt vector base address to 0xFFFF0000
-	mrc p15, 0, r0, c1, c0, 0
-	orr r0, #0x2000 ;@ r0 |= (1 << 13) V bit
-	mcr p15, 0, r0, c1, c0, 0
+	;@mrc p15, 0, r0, c1, c0, 0
+	;@orr r0, #0x2000 ;@ r0 |= (1 << 13) V bit
+	;@mcr p15, 0, r0, c1, c0, 0
 	
 	;@ Disable IRQ
-	mov r0, #0xC0
-	msr cpsr_c, r0
+	;@mov r0, #0xC0
+	;@msr cpsr_c, r0
 
 	;@ Init IRQ stack
 	cps #0x12

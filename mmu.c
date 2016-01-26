@@ -47,11 +47,9 @@ static __attribute__((aligned(0x1000))) uint32_t sramGamePak[SRAM_GAMEPAK_SIZE>>
 
 static void enableMMU(void)
 {
-	__asm__ volatile("push {r0}\n"
-					 "mcr p15, 0, %0, c1, c0, 0\n" // Disable cache & MMU
+	__asm__ volatile("mcr p15, 0, %0, c1, c0, 0\n" // Disable cache & MMU
 					 "mcr p15, 0, r0, c8, c7, 0\n" // Invalidate Unified TLB entries 
 					 "mcr p15, 0, %1, c1, c0, 0\n"
-					 "pop {r0}\n"
 					 :: "r"(0),
 						"r"(0x00802071)// MMU Enabled | Interrupt vector base @0xFFFF0000 | subpage AP bits enabled (->ARMv6 format)
 					 );
@@ -59,34 +57,26 @@ static void enableMMU(void)
 
 static void initTableBaseControlRegister(void)
 { 
-	__asm__ volatile("push {r0}\n"
-					 "mov r0, %0\n"
-					 "mcr p15, 0, r0, c2, c0, 2\n"
-					 "pop {r0}\n"
+	__asm__ volatile("mcr p15, 0, %0, c2, c0, 2\n"
 					 :: "r"(MMU_N));
 }
 
 static void initTranslationTableBaseRegisters(void)
 {
-	__asm__ volatile("push {r0}\n"
-
+	__asm__ volatile(
 					 // Register0
-					 "mov r0, %0\n"
-					 "mcr p15, 0, r0, c2, c0, 0\n" 
+					 "mcr p15, 0, %0, c2, c0, 0\n" 
 					 
 					 // Register1
-					 "mcr p15, 0, r0, c2, c0, 1\n"
-
-					 "pop {r0}\n"
+					 "mcr p15, 0, %0, c2, c0, 1\n"
 					 :: "r"(firstEntries));
 }
 
 static void initPermissions(void)
 {
-	__asm__ volatile("push {r0}\n"
-					 "mov r0, #0x1\n" // Enables permission check for domain D0
-					 "mcr p15, 0, r0, c3, c0, 0\n"
-					 "pop {r0}\n");
+	__asm__ volatile("mcr p15, 0, %0, c3, c0, 0\n"
+					 :: "r"(1) // Enables permission check for domain D0 
+					 );
 }
 
 static uint32_t *getFirstLevelEntry(uint32_t virtualAddress)
@@ -144,10 +134,6 @@ uint32_t virt2Physical(uint32_t virt)
 
 void MMUInit(void)
 {
-	initTableBaseControlRegister();
-	initTranslationTableBaseRegisters();
-	initPermissions();
-	
 	// First, make the kernel virtual addresses equal to the physical ones
 	MMUPopulateRange(KERNEL_TEXT_BEGIN, KERNEL_TEXT_BEGIN, KERNEL_TEXT_SIZE, READWRITE);
 	MMUPopulateRange(KERNEL_DATA_BEGIN, KERNEL_DATA_BEGIN, KERNEL_DATA_SIZE, READWRITE);
@@ -172,6 +158,9 @@ void MMUInit(void)
 	// Map GBA mirrored memories
 	MMUPopulateRange(WRAM1_BEGIN + 0x00FFF000, ((uint32_t) wram1) + 0x00007000, 0x1000, READWRITE);
 
+	initTableBaseControlRegister();
+	initTranslationTableBaseRegisters();
+	initPermissions();
 	enableMMU();
 }
 
