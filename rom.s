@@ -1,3 +1,3 @@
 .section .text
-.incbin "resource/ansi_console.gba"
+.incbin "resource/SimpleBGScroll_mb.gba"
 
