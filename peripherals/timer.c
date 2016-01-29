@@ -1,8 +1,6 @@
 #include "timer.h"
 #include "peripherals.h"
 
-#define P_TIMER_BASE 0x04000100
-
 struct TimerInfo
 {
 	unsigned int started;
@@ -17,7 +15,7 @@ static struct TimerInfo timerChannels[4];
 
 static void TimerRefreshChannel(unsigned int channel)
 {
-	const uint16_t *ptr = (uint16_t*) (P_TIMER_BASE + 0x4 * channel);
+	const volatile uint16_t *ptr = PERIPH16(0x100 + 0x4 * channel);
 	uint16_t control = ptr[1];
 
 	if(control & (1 << 7)) // Start timer
@@ -80,7 +78,7 @@ void TimerOnTick(void)
 					}
 				}
 				
-				*(uint16_t*)(periphdata + (0x100>>2) + i) = timerChannels[i].counter;
+				*PERIPH16(0x100 + (i<<1)) = timerChannels[i].counter;
 			}
 		}
 	}

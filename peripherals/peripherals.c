@@ -2,6 +2,7 @@
 #include "dma.h"
 #include "timer.h"
 #include "special.h"
+#include "../mem.h"
 
 #define PERIPH_BASE 0x04000000
 
@@ -10,15 +11,18 @@ uint32_t periphInstructionContent;
 uint32_t periphThumb;
 uint32_t lastPeripheralAddress;
 
-uint32_t __attribute__((aligned(0x1000))) periphdata[PERIPH_SIZE >> 2];
+void *periphdata;
 
 void PeripheralsInit(void)
 {
 	size_t i;
-	for(i = 0; i < PERIPH_SIZE >> 2; ++i)
-		periphdata[i] = 0;
 
-	MMUPopulateRange(PERIPH_BASE, (uint32_t) periphdata, PERIPH_SIZE, READONLY);
+	periphdata = Memcalloc(PERIPH_SIZE, 0x1000);
+
+	MMUPopulateRange((uint32_t) periphdata, (uint32_t) periphdata, PERIPH_SIZE, READWRITE); // map the physical mem
+																							// so that periphdata
+																							// can be used
+	MMUPopulateRange(PERIPH_BASE, (uint32_t) periphdata, PERIPH_SIZE, READONLY); // map the virtual mem
 
 	for(i = 0; i < 0xFF; ++i)
 		MMUPopulateRange(PERIPH_BASE + (i << 16), (uint32_t) periphdata, 0x1000, READONLY);

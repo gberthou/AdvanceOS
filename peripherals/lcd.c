@@ -14,8 +14,6 @@
 #define GBA_IF (*PERIPH16(0x202))
 #define GBA_IME (*PERIPH32(0x208))
 
-extern uint32_t periphdata[];
-
 void LCDRefresh(void)
 {
 	ConsolePrint(31, 6, "mode:");
@@ -52,11 +50,12 @@ void LCDOnTick(void)
 static uint32_t palette2screen(uint16_t paletteColor)
 {
 	// There is an additionnal left shift of 3 in order to
-	// scale the input color in range 0-31 to 0-244
-	return 0xFF000000
+	// scale the input color in range 0-31 to 0-248
+	return 0x00000000
 		 | ((paletteColor & 0x1F) << 3)         // R
 		 | (((paletteColor >> 5) & 0x1F) << 11)  // G
 		 | (((paletteColor >> 10) & 0x1F) << 19); // B
+;
 }
 
 static void clipAndPutPixel(uint32_t x, uint32_t y, uint32_t color)
@@ -67,7 +66,7 @@ static void clipAndPutPixel(uint32_t x, uint32_t y, uint32_t color)
 
 static void fillWithBackdropColor(void)
 {
-	uint32_t color = palette2screen(*(uint16_t*)GBA_BG_PALETTE);
+	uint32_t color = palette2screen(*(volatile uint16_t*)GBA_BG_PALETTE);
 	uint32_t x;
 	uint32_t y;
 	for(y = 0; y < GBA_HEIGHT; ++y)
@@ -79,16 +78,18 @@ static void renderBg(unsigned int mode, unsigned int bg)
 {
 	if(mode == 0 || mode == 1)
 	{
-		uint16_t bgcnt = *PERIPH16(8 + (bg << 1));
+		uint16_t bgcnt = *PERIPH16(8 + bg * 2);
 		uint32_t offsetTileData = 0x4000 * ((bgcnt >> 2) & 0x3);
 		uint32_t offsetMapData = 0x800 * ((bgcnt >> 8) & 0x1F);
-		uint16_t *mapData = (uint16_t*) (GBA_VRAM_BEGIN + offsetMapData);
+		volatile uint16_t *mapData = (volatile uint16_t*) (GBA_VRAM_BEGIN + offsetMapData);
 		uint32_t currentTile;
+		uint32_t sum = 0;
 
 		for(currentTile = 0; currentTile < 32 * 32; ++currentTile)
 		{
-			uint8_t *tileData = (uint8_t*) (GBA_VRAM_BEGIN + offsetTileData + (((*mapData) & 0x3FF) << 5));
-			uint16_t *palette = (uint16_t*) (GBA_BG_PALETTE + (((*mapData) >> 12) << 5));
+			volatile uint8_t *tileData = (volatile uint8_t*) (GBA_VRAM_BEGIN + offsetTileData + ((*mapData) & 0x3FF) * 32);
+			volatile uint16_t *palette = (volatile uint16_t*) (GBA_BG_PALETTE + ((*mapData) >> 12) * 32);
+			
 			uint32_t x;
 			uint32_t y;
 
@@ -97,7 +98,7 @@ static void renderBg(unsigned int mode, unsigned int bg)
 				for(x = 0; x < 8; ++x)
 				{
 					// TODO: Manage flip bits
-					uint8_t colorIndex = tileData[(x>>1) + (y<<2)];
+					uint8_t colorIndex = *tileData;
 					uint16_t color;
 
 					// Structure of the data:
@@ -106,17 +107,23 @@ static void renderBg(unsigned int mode, unsigned int bg)
 					// L = pixel on the left
 
 					if(x & 1) // Pixel on the right
+					{
 						colorIndex >>=4;
+						++tileData; // Increase tile pointer only when the
+									// two corresponding pixels have been
+									// drawn (<=> when x is odd)
+					}
 					else // Pixel on the left
 						colorIndex &= 0xF;
 					color = palette[colorIndex];
 
 					if(color) // Color == 0 -> always transparent
-						clipAndPutPixel(x + ((currentTile & 0x1F) << 3),
-										y + ((currentTile >> 5) << 3),
+						clipAndPutPixel(x + (currentTile & 0x1F) * 8,
+										y + (currentTile >> 5) * 8,
 										palette2screen(color));
 				}
 			}
+			sum += *mapData;
 			++mapData;
 		}
 	}

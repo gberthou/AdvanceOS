@@ -40,9 +40,9 @@ int main(void)
 	{
 		paintGreen();
 		
+		PeripheralsInit();
 		GBALoadComponents();
 		FBConvertBufferToVirtualSpace();
-		PeripheralsInit();
 		MMUInit();
 
 		paintSpecial();

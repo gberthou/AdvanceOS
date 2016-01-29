@@ -3,24 +3,6 @@
 #include "mmu.h"
 #include "linker.h"
 
-#define WRAM0_BEGIN 0x02000000
-#define WRAM0_SIZE 0x40000
-
-#define WRAM1_BEGIN 0x03000000
-#define WRAM1_SIZE 0x8000
-
-#define PALETTE_RAM_BEGIN 0x05000000
-#define PALETTE_RAM_SIZE 0x400
-
-#define VRAM_BEGIN 0x06000000
-#define VRAM_SIZE 0x18000
-
-#define OAM_BEGIN 0x07000000
-#define OAM_SIZE 0x400
-
-#define SRAM_GAMEPAK_BEGIN 0x0E000000
-#define SRAM_GAMEPAK_SIZE 0x10000
-
 /* Please see
  * http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0301h/index.html
  */
@@ -36,14 +18,6 @@
 
 static __attribute__((aligned(FIRST_LEVEL_ALIGN))) uint32_t firstEntries[FIRST_LEVEL_COUNT];
 static uint32_t secondEntries[SECOND_LEVEL_COUNT];
-
-// GBA Memories
-static __attribute__((aligned(0x1000))) uint32_t wram0[WRAM0_SIZE>>2];
-static __attribute__((aligned(0x1000))) uint32_t wram1[WRAM1_SIZE>>2];
-static __attribute__((aligned(0x1000))) uint32_t paletteRam[PALETTE_RAM_SIZE>>2];
-static __attribute__((aligned(0x1000))) uint32_t vram[VRAM_SIZE>>2];
-static __attribute__((aligned(0x1000))) uint32_t oam[OAM_SIZE>>2];
-static __attribute__((aligned(0x1000))) uint32_t sramGamePak[SRAM_GAMEPAK_SIZE>>2];
 
 static void enableMMU(void)
 {
@@ -109,6 +83,8 @@ void MMUPopulateRange(uint32_t vAddress, uint32_t pAddress, size_t size, enum Ac
 		 */
 	uint32_t secondEntrySuffix = (3 << 4) | 0x2 | (accessRights == READONLY ? (1 << 9) : 0);
 
+	pAddress &= ~LVL2_MASK;
+
 	for(actualVAddress = vAddress & ~LVL2_MASK;
 		actualVAddress < maxVAddress;
 		actualVAddress += (1 << 12),
@@ -146,17 +122,6 @@ void MMUInit(void)
 
 	// Set translation table for interrupt vector
 	MMUPopulateRange(0xFFFF0000, VECTORTABLE_BEGIN, VECTORTABLE_SIZE, READWRITE);
-
-	// Map GBA memories
-	MMUPopulateRange(WRAM0_BEGIN, (uint32_t) wram0, WRAM0_SIZE, READWRITE);
-	MMUPopulateRange(WRAM1_BEGIN, (uint32_t) wram1, WRAM1_SIZE, READWRITE);
-	MMUPopulateRange(PALETTE_RAM_BEGIN, (uint32_t) paletteRam, PALETTE_RAM_SIZE, READWRITE);
-	MMUPopulateRange(VRAM_BEGIN, (uint32_t) vram, VRAM_SIZE, READWRITE);
-	MMUPopulateRange(OAM_BEGIN, (uint32_t) oam, OAM_SIZE, READWRITE);
-	MMUPopulateRange(SRAM_GAMEPAK_BEGIN, (uint32_t) sramGamePak, SRAM_GAMEPAK_SIZE, READWRITE);
-
-	// Map GBA mirrored memories
-	MMUPopulateRange(WRAM1_BEGIN + 0x00FFF000, ((uint32_t) wram1) + 0x00007000, 0x1000, READWRITE);
 
 	initTableBaseControlRegister();
 	initTranslationTableBaseRegisters();

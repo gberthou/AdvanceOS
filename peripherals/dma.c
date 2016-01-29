@@ -1,14 +1,13 @@
 #include <sys/types.h>
 
 #include "dma.h"
+#include "peripherals.h"
 #include "../utils.h"
 #include "../console.h"
 
-#define P_DMA_BASE 0x040000B0
-
 void DMARefreshChannel(unsigned int channel)
 {
-	uint32_t *base = (uint32_t*) (P_DMA_BASE + 0xc * channel);
+	volatile uint32_t *base = PERIPH32(0xB0 + 0xc * channel);
 	uint32_t control = base[2];
 
 	// TODO: Manage DMA Start Timing bits, etc.

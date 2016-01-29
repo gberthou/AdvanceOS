@@ -7,15 +7,15 @@
 
 #define PERIPH_SIZE 0x804
 
-#define PERIPH32(x) (periphdata + ((x) >> 2))
-#define PERIPH16(x) (((uint16_t*)periphdata) + ((x) >> 1))
+#define PERIPH32(x) (((volatile uint32_t*)periphdata) + ((x) >> 2))
+#define PERIPH16(x) (((volatile uint16_t*)periphdata) + ((x) >> 1))
 
 extern void *periphInstructionResumeAddress;
 extern uint32_t periphInstructionContent;
 extern uint32_t periphThumb;
 extern uint32_t lastPeripheralAddress;
 
-extern uint32_t periphdata[];
+extern void *periphdata;
 
 void PeripheralsInit(void);
 void PeripheralsSetAccess(enum AccessRights accessRights);

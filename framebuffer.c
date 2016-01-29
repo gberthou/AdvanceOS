@@ -94,14 +94,14 @@ struct FBInfo *FBInit(uint32_t width, uint32_t height)
 
 void FBPutColor(uint32_t x, uint32_t y, uint32_t color)
 {
-	fbInfo.ptr[x + y * fbInfo.width] = color;
+	fbInfo.ptr[x + y * (fbInfo.pitch >> 2)] = color;
 }
 
 void FBConvertBufferToVirtualSpace(void)
 {
-	uint32_t *newPtr = sysAlloc(fbInfo.height * fbInfo.pitch, 0x1000);
+	uint32_t *newPtr = Memalloc(fbInfo.height * fbInfo.pitch, 0x1000);
 
-	MMUPopulateRange((uint32_t) newPtr, (uint32_t) fbInfo.ptr, fbInfo.width * fbInfo.pitch, READWRITE);
+	MMUPopulateRange((uint32_t) newPtr, (uint32_t) fbInfo.ptr, fbInfo.height * fbInfo.pitch, READWRITE);
 	fbInfo.ptr = newPtr;
 }
 
