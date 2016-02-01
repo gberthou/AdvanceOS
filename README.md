@@ -9,14 +9,25 @@ GBA has an ARM7TDMI processor and the processor of Raspberry Pi is ARM1176JZF-S.
 
 ## How to install and run
 ### Installation
-1. Clone the following repo and build it to get a version of qemu that simulates Raspberry Pi: [Torlus/qemu.git](https://github.com/Torlus/qemu.git)
-2. Append path to qemu/arm-softmmu to your PATH environment variable
+1. (Only if you want to debug/emulate the kernel on your computer)
+    Clone the following repo and build it to get a version of qemu that simulates Raspberry Pi: [Torlus/qemu.git](https://github.com/Torlus/qemu.git)
+2. (Only if you want to debug/emulate the kernel on your computer)
+    Append path to qemu/arm-softmmu to your PATH environment variable
 3. Clone this repo
 4. run `make build`
 
-### Compiling and running the kernel
-5. run `make`
-6. Put the generated kernel.img into your SD card
+### Compiling the kernel
+run `make`
+
+### Running the kernel on Raspberry Pi hardware
+Put the generated kernel.img into your SD card
+
+### Debugging the kernel on the computer (requires qemu)
+1. Change directory to ./qemu
+2. Run ./run-emu.sh in one terminal
+3. Run ./run-gdb.sh in another terminal
+
+Currently, qemu and gdb communicate through port 2222. If you have another application that uses this port, you can edit run-emu.sh and .gdbinit to change the remote port.
 
 ## Features
 1. Use of MMU
