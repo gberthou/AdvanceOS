@@ -47,14 +47,10 @@ UnusedHandler: b UnusedHandler
 
 .global IRQHandler
 IRQHandler:
-	sub lr, lr, #0x4
-	srsdb sp!, #0x12
-
 	push {r0-r12, lr}
 	bl TimerCheckIRQ
 	pop {r0-r12, lr}	
-
-	rfeia sp!
+	subs pc, lr, #4
 
 .global FIQHandler
 FIQHandler: b FIQHandler

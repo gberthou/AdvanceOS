@@ -11,8 +11,9 @@
 #define GBA_OBJ_PALETTE 0x05000200
 
 #define GBA_IE (*PERIPH16(0x200))
-#define GBA_IF (*PERIPH16(0x202))
 #define GBA_IME (*PERIPH32(0x208))
+
+#define LCD_VCOUNT (*PERIPH16(6))
 
 void LCDRefresh(void)
 {
@@ -20,31 +21,35 @@ void LCDRefresh(void)
 	ConsolePrintHex(37, 6, *PERIPH32(0));
 
 	ConsolePrint(31, 7, "BG0CNT:");
-	ConsolePrintHex(38, 7, *PERIPH16(8));
+	ConsolePrintHex(39, 7, *PERIPH16(8));
 
 	LCDUpdateScreen();
 
-	/*if(GBA_IME & 1)
+	if(GBA_IME & 1)
 	{
 		if(GBA_IE & 1) // VBLANK
 		{
-			GBA_IF |= 1;
+			GBASetInterruptFlags(1);
 			GBACallIRQ();
 		}
 	}
-	*/
 }
 
 void LCDOnTick(void)
 {
-	uint16_t *ptr = ((uint16_t*) periphdata) + 3;
+	register uint16_t vcount = LCD_VCOUNT;
 	// Increment VCOUNT
-	*ptr = (*ptr + 1) & 0xFF;
+	vcount = (vcount + 1) & 0xFF;
 	
-	if(*ptr == 227)
+	if(vcount == 227)
+	{
+		LCD_VCOUNT = vcount;
 		LCDRefresh();
-	else if(*ptr > 227)
-		*ptr = 0;
+	}
+	else if(vcount > 227)
+		LCD_VCOUNT = 0;
+	else
+		LCD_VCOUNT = vcount;
 }
 
 static uint32_t palette2screen(uint16_t paletteColor)
@@ -78,12 +83,17 @@ static void renderBg(unsigned int mode, unsigned int bg)
 {
 	if(mode == 0 || mode == 1)
 	{
-		uint16_t bgcnt = *PERIPH16(8 + bg * 2);
+	uint16_t bgcnt = *PERIPH16(8 + bg * 2);
 		uint32_t offsetTileData = 0x4000 * ((bgcnt >> 2) & 0x3);
 		uint32_t offsetMapData = 0x800 * ((bgcnt >> 8) & 0x1F);
 		volatile uint16_t *mapData = (volatile uint16_t*) (GBA_VRAM_BEGIN + offsetMapData);
 		uint32_t currentTile;
-		uint32_t sum = 0;
+		uint32_t bgScrollX = (*PERIPH16(0x10 + bg * 4)) & 0x1FF;
+		uint32_t bgScrollY = (*PERIPH16(0x12 + bg * 4)) & 0x1FF;
+
+		//*PERIPH16(0x10+4*bg) += 4;
+
+		ConsolePrintHex(31, 10, bgScrollX);
 
 		for(currentTile = 0; currentTile < 32 * 32; ++currentTile)
 		{
@@ -118,12 +128,11 @@ static void renderBg(unsigned int mode, unsigned int bg)
 					color = palette[colorIndex];
 
 					if(color) // Color == 0 -> always transparent
-						clipAndPutPixel(x + (currentTile & 0x1F) * 8,
-										y + (currentTile >> 5) * 8,
+						clipAndPutPixel(x - bgScrollX + (currentTile & 0x1F) * 8,
+										y - bgScrollY + (currentTile >> 5) * 8,
 										palette2screen(color));
 				}
 			}
-			sum += *mapData;
 			++mapData;
 		}
 	}

@@ -8,5 +8,8 @@ void GBALoadComponents(void);
 void GBARun(void);
 void GBACallIRQ(void);
 
+void GBASetInterruptFlags(uint16_t flags);
+void GBAClearInterruptFlags(uint16_t flags);
+
 #endif
 

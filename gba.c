@@ -26,6 +26,8 @@
 #define SRAM_GAMEPAK_BEGIN 0x0E000000
 #define SRAM_GAMEPAK_SIZE 0x10000
 
+static void *wram1;
+
 void GBALoadComponents(void)
 {
 	unsigned int i;
@@ -34,7 +36,7 @@ void GBALoadComponents(void)
 	void *alignedGbaRom = Memalloc(GBA_ROM_SIZE, 0x1000);
 
 	void *wram0       = Memcalloc(WRAM0_SIZE, 0x1000);
-	void *wram1       = Memcalloc(WRAM1_SIZE, 0x1000);
+	      wram1       = Memcalloc(WRAM1_SIZE, 0x1000);
 	void *paletteRam  = Memcalloc(PALETTE_RAM_SIZE, 0x1000);
 	void *vram        = Memcalloc(VRAM_SIZE, 0x1000);
 	void *oam         = Memcalloc(OAM_SIZE, 0x1000);
@@ -78,10 +80,45 @@ void GBARun(void)
 
 void GBACallIRQ(void)
 {
-	__asm__ volatile("push {lr}\n"
-					 "cps #0x12\n"
+	static uint32_t spsr;
+	static uint32_t cpsr;
+
+	// Scratch registers, r12 and lr will be saved by the BIOS so no need to
+	// do it here, except from lr that is modified by this function
+	// CPSR mode should be already 0x12
+	
+	__asm__ volatile("push {lr}");
+	__asm__ volatile("mrs %0, spsr\n"
+					 "mrs %1, cpsr"
+					 : "=r"(spsr),
+					   "=r"(cpsr));
+	__asm__ volatile("msr spsr, %0\n"
 					 "add lr, pc, #4\n"
-					 "b 0x18\n"
-					 "pop {lr}");
+					 "b 0x128\n"
+					 "msr spsr, %1"
+					 :: "r"(cpsr),
+						"r"(spsr));
+	__asm__ volatile("pop {lr}");
+	//__asm__ volatile("b 0x18");
+}
+
+void GBASetInterruptFlags(uint16_t flags)
+{
+	volatile uint16_t *ptr = PERIPH16(0x202);
+	uint16_t gbaIF = *ptr | flags;
+	*ptr = gbaIF;
+
+	// Set Interrupt Check Flag @0x3007FF8
+	*(uint16_t*)0x3007FF8 = gbaIF;
+}
+
+void GBAClearInterruptFlags(uint16_t flags)
+{
+	volatile uint16_t *ptr = PERIPH16(0x202);
+	uint16_t gbaIF = *ptr & ~flags;
+	*ptr = gbaIF;
+
+	// Set Interrupt Check Flag @0x3007FF8
+	*(uint16_t*)0x3007FF8 = gbaIF;
 }
 

@@ -4,14 +4,15 @@
 #include "console.h"
 #include "linker.h"
 #include "timer.h"
+#include "gba.h"
 #include "peripherals/peripherals.h"
 
 #define PERIPHERALS_BEGIN 0x04000000
 #define PERIPHERALS_END   0x04000803
+#define GBA_IF_ADDRESS    0x04000202
 
-#define RESTORE_FAULTING_MODE() __asm__ volatile("push {r0, r1, r2}\n"\
-												 "mov r2, sp\n"\
-												 "add sp, #12\n"\
+#define RESTORE_FAULTING_MODE() __asm__ volatile("stmdb sp, {r0, r1, r2}\n"\
+												 "sub r2, sp, #12\n"\
 												 "mrs r0, cpsr\n"\
 												 "ldr r1, =spsrDataHandler\n"\
 												 "ldr r1, [r1]\n"\
@@ -34,15 +35,19 @@ const uint16_t RESUME_THUMB = 0x4700 | (1 << 6) | ((14-8) << 3); // bx lr
 
 static void __attribute__((naked)) onPeripheralWritten(void)
 {
-	IRQDisable();
+	// IRQs are already disabled at this point because of DataHandler
+	// (this function should not be called by any other mechanism)
+	
 	__asm__ volatile("cps 0x17\n"
-					 "push {r0-r12, lr}");
+					 "push {r0-r12}");
 	PeripheralsRefresh();
 	PeripheralsResume();
 
 	RESTORE_FAULTING_MODE();
 	__asm__ volatile("ldr lr, %0"
 					 :: "m"(lrToRestore));
+	
+	/*
 	__asm__ volatile("push {%0}\n"
 					 "push {%1}"
 					 :: "r"(spsrDataHandler),
@@ -51,6 +56,16 @@ static void __attribute__((naked)) onPeripheralWritten(void)
 					 "pop {r0-r12, lr}");
 	RESTORE_FAULTING_MODE();
 	__asm__ volatile("rfeia sp!");
+	*/
+
+	__asm__ volatile("cps 0x17\n"
+					 "msr spsr, %0\n"
+					 "pop {r0-r12}\n"
+					 "ldr lr, =periphInstructionResumeAddress\n"
+					 "ldr lr, [lr]\n"
+					 "movs pc, lr"
+					 :: "r"(spsrDataHandler)		 
+			);
 }
 
 /*
@@ -75,47 +90,82 @@ void __attribute__((naked)) DataHandler(void)
 	register uint32_t instructionAddress;
 	register uint32_t faultAddress;
 	
-	__asm__ volatile("sub lr, lr, #8\n"
+	__asm__ volatile(
 					 "push {r0-r12, lr}\n"
-					 "mov %0, lr\n" 
+					 "sub %0, lr, #8\n" 
 					 "mrs %1, spsr\n" // Get CPSR value at the moment when the interrupt was triggered (SPSR_abt)
 					 : "=r"(instructionAddress),
 					   "=r"(spsrDataHandler));
+
+	// Disable IRQs of the faulting mode
+	__asm__ volatile("msr spsr, %0" :: "r"(spsrDataHandler | 0xc0));
 
 	// Read Fault Address Register
 	__asm__ volatile("mrc p15, 0, %0, c6, c0, 0" : "=r"(faultAddress));
 
 	if(faultAddress >= PERIPHERALS_BEGIN && faultAddress <= PERIPHERALS_END)
 	{
-		// Check thumb bit to compute the instruction following the one which
-		// triggered the interrupt
-
-		if(spsrDataHandler & 0x20) // Thumb mode was enabled
+		if(faultAddress == GBA_IF_ADDRESS)
 		{
-			periphInstructionResumeAddress = (void*)(instructionAddress + 2);
-			periphInstructionContent = *(uint16_t*)periphInstructionResumeAddress;
-			*(uint16_t*) periphInstructionResumeAddress = RESUME_THUMB;
-			periphThumb = 1;
+			if(spsrDataHandler & 0x20) // Thumb mode was enabled
+			{
+				// TODO
+				for(;;);	
+				__asm__ volatile("pop {r0-r12, lr}\n"
+								 "subs pc, lr, #6"); // 8-2
+			}
+			else
+			{
+				uint32_t instructionCode = *(uint32_t*)instructionAddress;
+				
+				// /!\ Warning: Assumes that the faulting instruction was STR, STRH or STRD
+				uint32_t sourceRegister = (instructionCode >> 12) & 0xf;
+				uint32_t registerValue;
+
+				// /!\ Warning: Assumes that the register is in the range r0-r12
+				__asm__ volatile("ldr %0, [sp, %1]" // Loads the stored version of the register
+								 :"=r"(registerValue)
+								 :"r"(sourceRegister << 2));
+	
+				// Clear the corresponding IF bits	
+				GBAClearInterruptFlags(registerValue);
+
+				__asm__ volatile("pop {r0-r12, lr}\n"
+								 "subs pc, lr, #4"); // 8-4
+			}
 		}
 		else
 		{
-			periphInstructionResumeAddress = (void*)(instructionAddress + 4);
-			periphInstructionContent = *(uint32_t*)periphInstructionResumeAddress;
-			*(uint32_t*)periphInstructionResumeAddress = RESUME_ARM;
-			periphThumb = 0;
+			// Check thumb bit to compute the instruction following the one which
+			// triggered the interrupt
+
+			if(spsrDataHandler & 0x20) // Thumb mode was enabled
+			{
+				periphInstructionResumeAddress = (void*)(instructionAddress + 2);
+				periphInstructionContent = *(uint16_t*)periphInstructionResumeAddress;
+				*(uint16_t*) periphInstructionResumeAddress = RESUME_THUMB;
+				periphThumb = 1;
+			}
+			else
+			{
+				periphInstructionResumeAddress = (void*)(instructionAddress + 4);
+				periphInstructionContent = *(uint32_t*)periphInstructionResumeAddress;
+				*(uint32_t*)periphInstructionResumeAddress = RESUME_ARM;
+				periphThumb = 0;
+			}
+
+			lastPeripheralAddress = faultAddress & 0xFF00FFFF;
+			PeripheralsSetAccess(READWRITE);
+
+			RESTORE_FAULTING_MODE();
+			__asm__ volatile("str lr, %0" :: "m"(lrToRestore));
+			__asm__ volatile(
+							 "mov lr, %0\n"
+							 "cps 0x17\n"
+							 "pop {r0-r12, lr}\n"
+							 "subs pc, lr, #8"
+							 :: "r"(onPeripheralWritten));
 		}
-
-		lastPeripheralAddress = faultAddress & 0xFF00FFFF;
-		PeripheralsSetAccess(READWRITE);
-
-		RESTORE_FAULTING_MODE();
-		__asm__ volatile("str lr, %0" :: "m"(lrToRestore));
-		__asm__ volatile(
-						 "mov lr, %0\n"
-						 "cps 0x17\n"
-						 "pop {r0-r12, lr}\n"
-						 "movs pc, lr"
-						 :: "r"(onPeripheralWritten));
 	}
 	else
 	{
@@ -129,7 +179,7 @@ void __attribute__((naked)) DataHandler(void)
 	}
 
 	__asm__ volatile("pop {r0-r12, lr}\n"
-					 "movs pc, lr");
+					 "subs pc, lr, #8");
 }
 
 #ifdef OOPS
