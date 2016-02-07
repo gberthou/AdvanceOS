@@ -36,23 +36,30 @@ void TimerCheckIRQ(void)
 	register uint32_t csValue = *TMR_CS;
 	if(csValue & 2) // LCD timer
 	{
+        uint32_t ticks = *TMR_C1;
+        uint32_t currentTicks;
 		LCDOnTick();
 
 		*TMR_CS = csValue | 2; // Clear interrupt flag
-		*TMR_C1 += CLOCK_LCD;
-		if(*TMR_C1 <= *TMR_CLO)
-			*TMR_C1 = *TMR_CLO + CLOCK_LCD;
-		
+		ticks += CLOCK_LCD;
+        currentTicks = *TMR_CLO;
+		if(ticks < currentTicks)
+			ticks = currentTicks + CLOCK_LCD;
+        *TMR_C1 = ticks;
 	}
 	
 	if(csValue & 4) // GBA timer
 	{
+        uint32_t ticks = *TMR_C2;
+        uint32_t currentTicks;
 		//TimerOnTick();
 
 		*TMR_CS = csValue | 4; // Clear interrupt flag
-		*TMR_C2 += CLOCK_TIMER;
-		if(*TMR_C2 <= *TMR_CLO)
-			*TMR_C2 = *TMR_CLO + CLOCK_TIMER;
+		ticks += CLOCK_TIMER;
+        currentTicks = *TMR_CLO;
+		if(ticks <= currentTicks)
+			ticks = currentTicks + CLOCK_TIMER;
+        *TMR_C2 = ticks;
 	}
 }
 

@@ -83,13 +83,13 @@ static void renderBg(unsigned int mode, unsigned int bg)
 {
 	if(mode == 0 || mode == 1)
 	{
-	uint16_t bgcnt = *PERIPH16(8 + bg * 2);
+        uint16_t bgcnt = *PERIPH16(8 + bg * 2);
 		uint32_t offsetTileData = 0x4000 * ((bgcnt >> 2) & 0x3);
 		uint32_t offsetMapData = 0x800 * ((bgcnt >> 8) & 0x1F);
 		volatile uint16_t *mapData = (volatile uint16_t*) (GBA_VRAM_BEGIN + offsetMapData);
 		uint32_t currentTile;
-		uint32_t bgScrollX = (*PERIPH16(0x10 + bg * 4)) & 0x1FF;
-		uint32_t bgScrollY = (*PERIPH16(0x12 + bg * 4)) & 0x1FF;
+		uint16_t bgScrollX = (*PERIPH16(0x10 + bg * 4)) & 0x1FF;
+		uint16_t bgScrollY = (*PERIPH16(0x12 + bg * 4)) & 0x1FF;
 
 		//*PERIPH16(0x10+4*bg) += 4;
 

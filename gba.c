@@ -7,6 +7,7 @@
 #include "mem.h"
 #include "linker.h"
 #include "utils.h"
+#include "swifunctions.h"
 
 #define WRAM0_BEGIN 0x02000000
 #define WRAM0_SIZE 0x40000
@@ -26,7 +27,18 @@
 #define SRAM_GAMEPAK_BEGIN 0x0E000000
 #define SRAM_GAMEPAK_SIZE 0x10000
 
-static void *wram1;
+void *wram1;
+
+static void patchBios(uint32_t *biosdata)
+{
+    uint32_t *swiVector = biosdata + (0x1c8 >> 2);
+    // Replace IntrWait (svc 0x04)
+    swiVector[4] = (uint32_t)SWI_IntrWait;
+
+    // Replace VBlankIntrWait (svc 0x05)
+    swiVector[5] = (uint32_t)SWI_VBlankIntrWait;
+
+}
 
 void GBALoadComponents(void)
 {
@@ -45,6 +57,9 @@ void GBALoadComponents(void)
 	Copy32(alignedGbaBios, (void*)GBABIOS_BEGIN, 0, 0, GBABIOS_END - GBABIOS_BEGIN);
 	Copy32(alignedGbaRom, (void*)GBAROM_BEGIN, 0, 0, GBAROM_END - GBAROM_BEGIN);
 	
+    // Code modifications
+    patchBios(alignedGbaBios);
+
 	// Map BIOS
 	MMUPopulateRange(0x00000000, (uint32_t) alignedGbaBios, GBA_BIOS_SIZE, READWRITE);
 	
@@ -61,7 +76,7 @@ void GBALoadComponents(void)
 	MMUPopulateRange(SRAM_GAMEPAK_BEGIN, (uint32_t) sramGamePak, SRAM_GAMEPAK_SIZE, READWRITE);
 
 	// Map GBA mirrored memories
-	MMUPopulateRange(WRAM1_BEGIN + 0x00FFF000, ((uint32_t) wram1) + 0x00007000, 0x1000, READWRITE);
+	MMUPopulateRange(WRAM1_BEGIN + 0x00FFF000, ((uint32_t) wram1) + 0x00007000, 0x1000, READONLY);
 
 }
 
@@ -95,9 +110,9 @@ void GBACallIRQ(void)
 	__asm__ volatile("msr spsr, %0\n"
 					 "add lr, pc, #4\n"
 					 "b 0x128\n"
-					 "msr spsr, %1"
-					 :: "r"(cpsr),
-						"r"(spsr));
+					 :: "r"(cpsr));
+
+	__asm__ volatile("msr spsr, %0" :: "r"(spsr));
 	__asm__ volatile("pop {lr}");
 	//__asm__ volatile("b 0x18");
 }
@@ -106,19 +121,19 @@ void GBASetInterruptFlags(uint16_t flags)
 {
 	volatile uint16_t *ptr = PERIPH16(0x202);
 	uint16_t gbaIF = *ptr | flags;
-	*ptr = gbaIF;
 
 	// Set Interrupt Check Flag @0x3007FF8
-	*(uint16_t*)0x3007FF8 = gbaIF;
+	*(uint16_t*)0x3007FF8 &= ~flags;
+	*ptr = gbaIF;
 }
 
 void GBAClearInterruptFlags(uint16_t flags)
 {
 	volatile uint16_t *ptr = PERIPH16(0x202);
 	uint16_t gbaIF = *ptr & ~flags;
-	*ptr = gbaIF;
 
 	// Set Interrupt Check Flag @0x3007FF8
-	*(uint16_t*)0x3007FF8 = gbaIF;
+	*(uint16_t*)0x3007FF8 |= flags;
+	*ptr = gbaIF;
 }
 
