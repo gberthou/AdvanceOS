@@ -24,6 +24,7 @@ void LCDRefresh(void)
 	ConsolePrintHex(39, 7, *PERIPH16(8));
 
 	LCDUpdateScreen();
+    FBCopyDoubleBuffer();
 
 	if(GBA_IME & 1)
 	{

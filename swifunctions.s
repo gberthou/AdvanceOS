@@ -2,9 +2,6 @@
 .global SWI_IntrWait
 SWI_IntrWait:
     ldr r3, =0x03fffff8
-    ;@ldr r3, [r3]
-    ;@ Offset 0x202 = 0x200 + 2
-    ;@add r3, r3, #0x200
     cmp r0, #0
     beq SWI_IntrWait_loop
     ;@ Clear old flags first

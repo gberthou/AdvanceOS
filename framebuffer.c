@@ -6,7 +6,8 @@
 
 #define VIDEOBUS_OFFSET 0x40000000
 
-struct FBInfo fbInfo;
+static struct FBInfo doubleFb;
+static struct FBInfo physicalFb;
 
 /* Please see
  * https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface
@@ -66,16 +67,16 @@ struct FBInfo *FBInit(uint32_t width, uint32_t height)
 			switch(*ptr++)
 			{
 				case 0x40008:
-					fbInfo.pitch = ptr[2];
+					physicalFb.pitch = ptr[2];
 					break;
 
 				case 0x48003:
-					fbInfo.width = ptr[2];
-					fbInfo.height = ptr[3];
+					physicalFb.width = ptr[2];
+					physicalFb.height = ptr[3];
 					break;
 
 				case 0x40001:
-					fbInfo.ptr = (uint32_t*) ptr[2];
+					physicalFb.ptr = (uint32_t*) ptr[2];
 					break;
 
 				case 0x48004:
@@ -87,21 +88,47 @@ struct FBInfo *FBInit(uint32_t width, uint32_t height)
 			}
 			ptr += *ptr / 4 + 2;
 		}
-		return &fbInfo;
+		return &physicalFb;
 	}
 	return 0;
 }
 
 void FBPutColor(uint32_t x, uint32_t y, uint32_t color)
 {
-	fbInfo.ptr[x + y * (fbInfo.pitch >> 2)] = color;
+	doubleFb.ptr[x + y * (doubleFb.pitch >> 2)] = color;
 }
 
 void FBConvertBufferToVirtualSpace(void)
 {
-	uint32_t *newPtr = Memalloc(fbInfo.height * fbInfo.pitch, 0x1000);
+    size_t bufferSize = physicalFb.height * physicalFb.pitch;
+	uint32_t *newPtr = Memalloc(bufferSize, 0x1000);
 
-	MMUPopulateRange((uint32_t) newPtr, (uint32_t) fbInfo.ptr, fbInfo.height * fbInfo.pitch, READWRITE);
-	fbInfo.ptr = newPtr;
+	MMUPopulateRange((uint32_t) newPtr, (uint32_t) physicalFb.ptr, physicalFb.height * physicalFb.pitch, READWRITE);
+	physicalFb.ptr = newPtr;
+}
+
+struct FBInfo *FBCreateDoubleBuffer(void)
+{
+    size_t bufferSize = physicalFb.height * physicalFb.pitch;
+    uint32_t *doubleBuffer = Memalloc(bufferSize, 0x1000);
+
+	MMUPopulateRange((uint32_t) doubleBuffer, (uint32_t) doubleBuffer, physicalFb.height * physicalFb.pitch, READWRITE);
+    
+    doubleFb.ptr    = doubleBuffer;
+    doubleFb.width  = physicalFb.width;
+    doubleFb.height = physicalFb.height;
+    doubleFb.pitch  = physicalFb.pitch;
+    return &doubleFb;
+}
+
+void FBCopyDoubleBuffer(void)
+{
+    // TODO: Use DMA
+    size_t bufferSize = (physicalFb.height * physicalFb.pitch) >> 2; // Unit: 32bit words
+    size_t i = bufferSize;
+    while(i--)
+    {
+        physicalFb.ptr[i] = doubleFb.ptr[i];
+    }
 }
 

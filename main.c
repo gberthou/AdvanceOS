@@ -18,36 +18,41 @@ void outputOK(void)
 	*GPSET0 = (1 << 21);
 }
 
-static void paintGreen(void)
+static void paintGreen(struct FBInfo *fb)
 {
 	size_t i;
 	for(i = 0; i <240*160*2; ++i)
-		fbInfo.ptr[i] = 0xFF00FF00;
+		fb->ptr[i] = 0xFF00FF00;
+    FBCopyDoubleBuffer();
 }
 
-static void paintSpecial(void)
+static void paintSpecial(struct FBInfo *fb)
 {
 	size_t x;
 	size_t y;
 	for(y = 0; y <160; ++y)
 		for(x = 0; x < 480; ++x)
-			fbInfo.ptr[y*480 + x] = 0xFF000000 | (((x+y)&0xFF) * 0x010101);
+			fb->ptr[y*480 + x] = 0xFF000000 | (((x+y)&0xFF) * 0x010101);
+    FBCopyDoubleBuffer();
 }
 
 int main(void)
 {
 	if(FBInit(240 * 2, 160))
 	{
-		paintGreen();
+        struct FBInfo *fb;
+        fb = FBCreateDoubleBuffer();
+		paintGreen(fb);
 		
 		PeripheralsInit();
 		GBALoadComponents();
 		FBConvertBufferToVirtualSpace();
 		MMUInit();
 
-		paintSpecial();
+		paintSpecial(fb);
 		GBARun();
 	}
+
 	for(;;)
 	{
 	}

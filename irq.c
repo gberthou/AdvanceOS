@@ -172,6 +172,7 @@ void __attribute__((naked)) DataHandler(void)
 
 		ConsolePrint(31, 2, "@ ");
 		ConsolePrintHex(33, 2, instructionAddress);
+        FBCopyDoubleBuffer();
 
 		for(;;);
 	}
