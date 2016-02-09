@@ -5,7 +5,7 @@
 #include "mem.h"
 #include "dma.h"
 
-#define USE_DMA
+//#define USE_DMA
 
 #define VIDEOBUS_OFFSET 0x40000000
 
@@ -132,7 +132,7 @@ void FBCopyDoubleBuffer(void)
     size_t bufferSize = (physicalFb.height * physicalFb.pitch); // Unit: bytes
     DMACopy32(physicalBuffer, doubleFb.ptr, bufferSize);
 #else
-    size_t i = (physicalFb.height * physicalFb.pitch); // Unit: 32bit words
+    size_t i = (physicalFb.height * physicalFb.pitch) >> 2; // Unit: 32bit words
     while(i--)
     {
         physicalFb.ptr[i] = doubleFb.ptr[i];
