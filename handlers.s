@@ -45,6 +45,9 @@ UndefinedHandler: b UndefinedHandler
 .global UnusedHandler
 UnusedHandler: b UnusedHandler
 
+.global SwiHandler
+SwiHandler: b 0x8
+
 .global IRQHandler
 IRQHandler:
 	push {r0-r12, lr}
