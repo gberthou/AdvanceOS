@@ -8,6 +8,7 @@
 #include "gba.h"
 #include "peripherals/peripherals.h"
 #include "irq.h"
+#include "dma.h"
 
 void outputOK(void)
 {

@@ -3,11 +3,15 @@
 #include "mmu.h"
 #include "linker.h"
 #include "mem.h"
+#include "dma.h"
+
+#define USE_DMA
 
 #define VIDEOBUS_OFFSET 0x40000000
 
 static struct FBInfo doubleFb;
 static struct FBInfo physicalFb;
+static void *physicalBuffer;
 
 /* Please see
  * https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface
@@ -76,8 +80,9 @@ struct FBInfo *FBInit(uint32_t width, uint32_t height)
 					break;
 
 				case 0x40001:
-					physicalFb.ptr = (uint32_t*) ptr[2];
-					break;
+					physicalBuffer = (uint32_t*) ptr[2];
+                    physicalFb.ptr = physicalBuffer;
+                    break;
 
 				case 0x48004:
 				case 0x48005:
@@ -123,12 +128,15 @@ struct FBInfo *FBCreateDoubleBuffer(void)
 
 void FBCopyDoubleBuffer(void)
 {
-    // TODO: Use DMA
-    size_t bufferSize = (physicalFb.height * physicalFb.pitch) >> 2; // Unit: 32bit words
-    size_t i = bufferSize;
+#ifdef USE_DMA
+    size_t bufferSize = (physicalFb.height * physicalFb.pitch); // Unit: bytes
+    DMACopy32(physicalBuffer, doubleFb.ptr, bufferSize);
+#else
+    size_t i = (physicalFb.height * physicalFb.pitch); // Unit: 32bit words
     while(i--)
     {
         physicalFb.ptr[i] = doubleFb.ptr[i];
     }
+#endif
 }
 

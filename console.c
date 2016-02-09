@@ -31,7 +31,7 @@ void ConsolePrint(uint32_t px, uint32_t py, const char *str)
 	{
 		displayChar(c, (x++) * GLYPH_W, y * GLYPH_H);
 	}
-    FBCopyDoubleBuffer();   
+    //FBCopyDoubleBuffer();   
 }
 
 void ConsolePrintHex(uint32_t px, uint32_t py, uint32_t x)
