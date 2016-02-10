@@ -3,7 +3,7 @@
 
 enum AccessRights
 {
-	READWRITE, READONLY
+    READWRITE, READONLY
 };
 
 void MMUInit(void);

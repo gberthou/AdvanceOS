@@ -19,58 +19,58 @@ static volatile uint32_t * const MAIL0_WRITE  = (uint32_t*) 0x02000B8A0;
 
 static inline void waitForMailboxNonFull(void)
 {
-	register uint32_t status;
-	do
-	{
-		memoryBarrier();
-		status = *MAIL0_STATUS;
-		memoryBarrier();
-	} while(status & MAIL_FULL);
+    register uint32_t status;
+    do
+    {
+        memoryBarrier();
+        status = *MAIL0_STATUS;
+        memoryBarrier();
+    } while(status & MAIL_FULL);
 }
 
 static inline void waitForMailboxNonEmpty(void)
 {
-	register uint32_t status;
-	do
-	{
-		memoryBarrier();
-		status = *MAIL0_STATUS;
-		memoryBarrier();
-	} while(status & MAIL_EMPTY);
+    register uint32_t status;
+    do
+    {
+        memoryBarrier();
+        status = *MAIL0_STATUS;
+        memoryBarrier();
+    } while(status & MAIL_EMPTY);
 }
 
 static inline uint8_t readMail(uint32_t *data)
 {
-	register uint32_t mail;
-	memoryBarrier();
-	mail = *MAIL0_READ;
-	memoryBarrier();
-	
-	*data = (mail & 0xFFFFFFF0);
-	return mail & 0xF;
+    register uint32_t mail;
+    memoryBarrier();
+    mail = *MAIL0_READ;
+    memoryBarrier();
+    
+    *data = (mail & 0xFFFFFFF0);
+    return mail & 0xF;
 }
 
 void MailboxSend(uint8_t channel, uint32_t data)
 {
-	register uint32_t w = (channel & 0xF) | (data & 0xFFFFFFF0);
-	waitForMailboxNonFull();
-	memoryBarrier();
-	*MAIL0_WRITE = w;
-	memoryBarrier();
+    register uint32_t w = (channel & 0xF) | (data & 0xFFFFFFF0);
+    waitForMailboxNonFull();
+    memoryBarrier();
+    *MAIL0_WRITE = w;
+    memoryBarrier();
 }
 
 uint32_t MailboxReceive(uint8_t channel)
 {
-	uint32_t data;
+    uint32_t data;
 
-	do
-	{
-		waitForMailboxNonEmpty();
-		memoryBarrier();
+    do
+    {
+        waitForMailboxNonEmpty();
+        memoryBarrier();
 
-		// Here is the dumb part
-	} while(readMail(&data) != channel);
-	
-	return data;
+        // Here is the dumb part
+    } while(readMail(&data) != channel);
+    
+    return data;
 }
 

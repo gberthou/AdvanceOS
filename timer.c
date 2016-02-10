@@ -17,40 +17,40 @@
 
 void TimerInit(void)
 {
-	*TMR_C1 = *TMR_CLO + CLOCK_LCD;
-	*TMR_C2 = *TMR_CLO + CLOCK_TIMER;
-	*TMR_CS |= 6;
+    *TMR_C1 = *TMR_CLO + CLOCK_LCD;
+    *TMR_C2 = *TMR_CLO + CLOCK_TIMER;
+    *TMR_CS |= 6;
 
     LCDInitClock(*TMR_CLO);
-	
+    
     *IRQ_ENABLE1 |= 6; // Enable ARM Timer IRQ
 }
 
 void TimerCheckIRQ(void)
 {
-	register uint32_t csValue = *TMR_CS;
-	if(csValue & 2) // LCD timer
-	{
-		LCDOnTick(*TMR_CLO);
+    register uint32_t csValue = *TMR_CS;
+    if(csValue & 2) // LCD timer
+    {
+        LCDOnTick(*TMR_CLO);
 
-		*TMR_CS = csValue | 2; // Clear interrupt flag
-		//ticks += CLOCK_LCD;
+        *TMR_CS = csValue | 2; // Clear interrupt flag
+        //ticks += CLOCK_LCD;
         *TMR_C1 = *TMR_CLO + CLOCK_LCD;
-	}
-	
-	if(csValue & 4) // GBA timer
-	{
+    }
+    
+    if(csValue & 4) // GBA timer
+    {
         uint32_t ticks = *TMR_C2;
         uint32_t currentTicks;
-		//TimerOnTick();
+        //TimerOnTick();
 
-		*TMR_CS = csValue | 4; // Clear interrupt flag
-		ticks += CLOCK_TIMER;
+        *TMR_CS = csValue | 4; // Clear interrupt flag
+        ticks += CLOCK_TIMER;
         currentTicks = *TMR_CLO;
-		if(ticks <= currentTicks)
-			ticks = currentTicks + CLOCK_TIMER;
+        if(ticks <= currentTicks)
+            ticks = currentTicks + CLOCK_TIMER;
         *TMR_C2 = ticks;
-	}
+    }
 }
 
 uint32_t TimerGetTicks(void)

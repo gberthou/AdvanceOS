@@ -9,28 +9,28 @@ static uint8_t *heap = (uint8_t*) HEAP_BEGIN;
 
 void *Memalloc(size_t sizeBytes, size_t align)
 {
-	uint8_t *ret;
-	--align;
-	ret = (uint8_t*) ((((uint32_t)heap) + align) & ~align);
+    uint8_t *ret;
+    --align;
+    ret = (uint8_t*) ((((uint32_t)heap) + align) & ~align);
 
-	if((uint32_t) ret >= HEAP_BEGIN + HEAP_SIZE - sizeBytes) // Out of heap :(
-	{
-		for(;;);
-	}
+    if((uint32_t) ret >= HEAP_BEGIN + HEAP_SIZE - sizeBytes) // Out of heap :(
+    {
+        for(;;);
+    }
 
-	heap = ret + sizeBytes;
-	return ret;
+    heap = ret + sizeBytes;
+    return ret;
 }
 
 void *Memcalloc(size_t sizeBytes, size_t align)
 {
-	uint8_t *ret = Memalloc(sizeBytes, align);
-	size_t i;
+    uint8_t *ret = Memalloc(sizeBytes, align);
+    size_t i;
 
-	// TODO: Optimize this (DMA and/or using words instead of bytes)
-	for(i = 0; i < sizeBytes; ++i)
-		ret[i] = 0;
+    // TODO: Optimize this (DMA and/or using words instead of bytes)
+    for(i = 0; i < sizeBytes; ++i)
+        ret[i] = 0;
 
-	return ret;
+    return ret;
 }
 
