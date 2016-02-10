@@ -31,6 +31,10 @@ const uint32_t RESUME_ARM = 0xe12fff1e; // bx lr
 //const uint16_t RESUME_THUMB = 0xdf2b;     // svc 0x2b
 const uint16_t RESUME_THUMB = 0x4700 | (1 << 6) | ((14-8) << 3); // bx lr
 
+/* Performance related variables */
+uint32_t irqBeginTicks;
+uint32_t irqEndTicks;
+
 static void __attribute__((naked)) onPeripheralWritten(void)
 {
 	// IRQs are already disabled at this point because of DataHandler
@@ -47,11 +51,14 @@ static void __attribute__((naked)) onPeripheralWritten(void)
 
 	__asm__ volatile("cps 0x17\n"
 					 "msr spsr, %0\n"
-					 "pop {r0-r12}\n"
+                     :: "r"(spsrDataHandler));
+    
+    irqEndTicks = TimerGetTicks();
+
+	__asm__ volatile("pop {r0-r12}\n"
 					 "ldr lr, =periphInstructionResumeAddress\n"
 					 "ldr lr, [lr]\n"
-					 "movs pc, lr"
-					 :: "r"(spsrDataHandler));
+					 "movs pc, lr");
 }
 
 void __attribute__((naked)) DataHandler(void)
@@ -59,9 +66,13 @@ void __attribute__((naked)) DataHandler(void)
 	register uint32_t instructionAddress;
 	register uint32_t faultAddress;
 	
-	__asm__ volatile(
-					 "push {r0-r12, lr}\n"
-					 "sub %0, lr, #8\n" 
+	__asm__ volatile("push {r0-r12, lr}\n");
+
+    __asm__ volatile("push {lr}");
+    uint32_t ticks = TimerGetTicks();
+    __asm__ volatile("pop {lr}");
+
+	__asm__ volatile("sub %0, lr, #8\n" 
 					 "mrs %1, spsr\n" // Get CPSR value at the moment when the interrupt was triggered (SPSR_abt)
 					 : "=r"(instructionAddress),
 					   "=r"(spsrDataHandler));
@@ -99,12 +110,18 @@ void __attribute__((naked)) DataHandler(void)
                 else
                     *(uint16_t*)0x3007FF8 &= ~registerValue;
 
+
 				__asm__ volatile("pop {r0-r12, lr}\n"
 								 "subs pc, lr, #4"); // 8-4
 			}
 		}
 		else
 		{
+            // Monitoring is not relevant in the other situations as irq
+            // handling goes fast.
+            // Here irq handling is heavier and thus needs to be optimized
+            irqBeginTicks = ticks;
+
             // Disable IRQs of the faulting mode
             __asm__ volatile("msr spsr, %0" :: "r"(spsrDataHandler | 0xc0));
 			

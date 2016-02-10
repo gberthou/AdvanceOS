@@ -1,6 +1,8 @@
 #include "lcd.h"
 #include "../console.h"
 #include "../gba.h"
+#include "../timer.h"
+#include "../irq.h"
 #include "peripherals.h"
 
 #define GBA_WIDTH 240
@@ -15,6 +17,13 @@
 
 #define LCD_VCOUNT (*PERIPH16(6))
 
+static uint32_t lcdclock;
+
+void LCDInitClock(uint32_t clock)
+{
+    lcdclock = clock;
+}
+
 void LCDRefresh(void)
 {
 	ConsolePrint(31, 6, "mode:");
@@ -22,6 +31,8 @@ void LCDRefresh(void)
 
 	ConsolePrint(31, 7, "BG0CNT:");
 	ConsolePrintHex(39, 7, *PERIPH16(8));
+
+    ConsolePrintHex(31, 16, irqEndTicks - irqBeginTicks);
 
 	LCDUpdateScreen();
     FBCopyDoubleBuffer();
@@ -36,21 +47,23 @@ void LCDRefresh(void)
 	}
 }
 
-void LCDOnTick(void)
+void LCDOnTick(uint32_t clock)
 {
-	register uint16_t vcount = LCD_VCOUNT;
-	// Increment VCOUNT
-	vcount = (vcount + 1) & 0xFF;
+    uint16_t previousVcount = LCD_VCOUNT;
+	uint16_t vcount;
+    uint32_t ellapsedTime = clock - lcdclock;
+    uint32_t ncycles = ellapsedTime / CLOCK_LCD;
+
+	vcount = ncycles % 228;
 	
-	if(vcount == 227)
-	{
-		LCD_VCOUNT = vcount;
+    LCD_VCOUNT = vcount;
+	if(vcount == 227 
+    || vcount < previousVcount) // Overflow: value 227 has been reached between
+                                // two calls
+    {
 		LCDRefresh();
-	}
-	else if(vcount > 227)
-		LCD_VCOUNT = 0;
-	else
-		LCD_VCOUNT = vcount;
+        lcdclock = clock;
+    }
 }
 
 static uint32_t palette2screen(uint16_t paletteColor)
@@ -91,8 +104,6 @@ static void renderBg(unsigned int mode, unsigned int bg)
 		uint32_t currentTile;
 		uint16_t bgScrollX = (*PERIPH16(0x10 + bg * 4)) & 0x1FF;
 		uint16_t bgScrollY = (*PERIPH16(0x12 + bg * 4)) & 0x1FF;
-
-		//*PERIPH16(0x10+4*bg) += 4;
 
 		ConsolePrintHex(31, 10, bgScrollX);
 

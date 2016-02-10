@@ -5,7 +5,7 @@
 #include "mem.h"
 #include "dma.h"
 
-//#define USE_DMA
+#define USE_DMA
 
 #define VIDEOBUS_OFFSET 0x40000000
 

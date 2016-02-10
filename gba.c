@@ -82,15 +82,12 @@ void GBALoadComponents(void)
 
 void GBARun(void)
 {
-	TimerLCDInit();
+	TimerInit();
 	IRQEnable();
 
-	//testPermissions();
-
 	__asm__ volatile("push {lr}\n"
-					 "ldr pc, [pc, #0]\n"
-					 "pop {lr}\n"
-					 ".word 0x08000000\n");
+					 "ldr pc, =#0x08000000\n"
+					 "pop {lr}\n");
 }
 
 void GBACallIRQ(void)
@@ -114,7 +111,6 @@ void GBACallIRQ(void)
 
 	__asm__ volatile("msr spsr, %0" :: "r"(spsr));
 	__asm__ volatile("pop {lr}");
-	//__asm__ volatile("b 0x18");
 }
 
 void GBASetInterruptFlags(uint16_t flags)

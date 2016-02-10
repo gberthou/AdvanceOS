@@ -13,5 +13,9 @@
 									  "msr cpsr, r0\n"\
 									  "pop {r0}\n")
 
+/* Performance related variables */
+extern uint32_t irqBeginTicks;
+extern uint32_t irqEndTicks;
+
 #endif
 
