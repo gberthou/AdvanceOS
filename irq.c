@@ -23,19 +23,21 @@ uint32_t irqEndTicks;
 
 void __attribute__((naked)) DataHandler(void)
 {
-    register uint32_t instructionAddress;
-    register uint32_t faultAddress;
-    register uint32_t spsr;
-    
+    uint32_t instructionAddress;
+    uint32_t faultAddress;
+    uint32_t spsr;
+    uint32_t ticks;
+
     __asm__ volatile("push {r0-r12, lr}\n");
-
+    __asm__ volatile("sub %0, lr, #8"
+                     : "=r"(instructionAddress));
+    
     // Monitoring purpose only
-    uint32_t ticks = TimerGetTicks();
+    ticks = TimerGetTicks();
 
-    __asm__ volatile("sub %0, lr, #8\n" 
-                     "mrs %1, spsr\n" // Get CPSR value at the moment when the interrupt was triggered (SPSR_abt)
-                     : "=r"(instructionAddress),
-                       "=r"(spsr));
+    __asm__ volatile("mrs %0, spsr" // Get CPSR value at the moment when the interrupt was triggered (SPSR_abt)
+                    : "=r"(spsr));
+    
 
     // Read Fault Address Register
     __asm__ volatile("mrc p15, 0, %0, c6, c0, 0" : "=r"(faultAddress));
