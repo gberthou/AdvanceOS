@@ -4,7 +4,7 @@
 #include <sys/types.h>
 
 //#define CLOCK_FREQ 700000000
-#define CLOCK_FREQ 7000000
+#define CLOCK_FREQ 1000000
 #define CLOCK_LCD (CLOCK_FREQ/13620)
 #define CLOCK_TIMER CLOCK_FREQ
 
