@@ -6,11 +6,6 @@
 
 #define PERIPH_BASE 0x04000000
 
-void *periphInstructionResumeAddress;
-uint32_t periphInstructionContent;
-uint32_t periphThumb;
-uint32_t lastPeripheralAddress;
-
 void *periphdata;
 
 void PeripheralsInit(void)
@@ -26,35 +21,6 @@ void PeripheralsInit(void)
 
     for(i = 0; i < 0xFF; ++i)
         MMUPopulateRange(PERIPH_BASE + (i << 16), (uint32_t) periphdata, 0x1000, READONLY);
-}
-
-void PeripheralsSetAccess(enum AccessRights accessRights)
-{
-    __asm__ volatile("push {r0}\n"
-                     "mrc p15, 0, r0, c1, c0, 0\n"
-                     "bic r0, #0x1\n" // Disable MMU
-                     "mcr p15, 0, r0, c1, c0, 0\n"
-                     "mcr p15, 0, r0, c8, c7, 0\n" // Invalidate TLB entries
-                     "pop {r0}\n"
-                    );
-
-    MMUPopulateRange(lastPeripheralAddress & 0xFF000000, (uint32_t) periphdata, PERIPH_SIZE, accessRights);
-
-    __asm__ volatile("push {r0}\n"
-                     "mrc p15, 0, r0, c1, c0, 0\n"
-                     "orr r0, #0x1\n" // Enable MMU
-                     "mcr p15, 0, r0, c1, c0, 0\n"
-                     "pop {r0}\n"
-                    );
-}
-
-void PeripheralsResume(void)
-{
-    if(periphThumb) // Thumb mode was enabled
-        *(uint16_t*)periphInstructionResumeAddress = periphInstructionContent;
-    else
-        *(uint32_t*)periphInstructionResumeAddress = periphInstructionContent;
-    PeripheralsSetAccess(READONLY);
 }
 
 void PeripheralsRefresh(void)

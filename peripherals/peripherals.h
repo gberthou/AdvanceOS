@@ -9,17 +9,11 @@
 
 #define PERIPH32(x) (((volatile uint32_t*)periphdata) + ((x) >> 2))
 #define PERIPH16(x) (((volatile uint16_t*)periphdata) + ((x) >> 1))
-
-extern void *periphInstructionResumeAddress;
-extern uint32_t periphInstructionContent;
-extern uint32_t periphThumb;
-extern uint32_t lastPeripheralAddress;
+#define PERIPH8(x) (((volatile uint8_t*)periphdata) + (x))
 
 extern void *periphdata;
 
 void PeripheralsInit(void);
-void PeripheralsSetAccess(enum AccessRights accessRights);
-void PeripheralsResume(void);
 void PeripheralsRefresh(void);
 
 #endif
