@@ -3,10 +3,6 @@
 #include "peripherals/lcd.h"
 #include "peripherals/timer.h"
 
-#define TMR_BASE 0x20003000
-
-#define TMR_CS  ((volatile uint32_t*)TMR_BASE)
-#define TMR_CLO (TMR_CS + 1)
 #define TMR_CHI (TMR_CS + 2)
 #define TMR_C0  (TMR_CS + 3)
 #define TMR_C1  (TMR_CS + 4)
@@ -34,7 +30,6 @@ void TimerCheckIRQ(void)
         LCDOnTick(*TMR_CLO);
 
         *TMR_CS = csValue | 2; // Clear interrupt flag
-        //ticks += CLOCK_LCD;
         *TMR_C1 = *TMR_CLO + CLOCK_LCD;
     }
     
@@ -51,10 +46,5 @@ void TimerCheckIRQ(void)
             ticks = currentTicks + CLOCK_TIMER;
         *TMR_C2 = ticks;
     }
-}
-
-uint32_t TimerGetTicks(void)
-{
-    return *TMR_CLO;
 }
 

@@ -29,9 +29,8 @@ void __attribute__((naked)) DataHandler(void)
     
     __asm__ volatile("push {r0-r12, lr}\n");
 
-    __asm__ volatile("push {lr}");
+    // Monitoring purpose only
     uint32_t ticks = TimerGetTicks();
-    __asm__ volatile("pop {lr}");
 
     __asm__ volatile("sub %0, lr, #8\n" 
                      "mrs %1, spsr\n" // Get CPSR value at the moment when the interrupt was triggered (SPSR_abt)
