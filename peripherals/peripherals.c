@@ -23,15 +23,16 @@ void PeripheralsInit(void)
         MMUPopulateRange(PERIPH_BASE + (i << 16), (uint32_t) periphdata, 0x1000, READONLY);
 }
 
-void PeripheralsRefresh(void)
+void PeripheralsRefresh(uint32_t address)
 {
-    //uint32_t addr = lastPeripheralAddress & ~((0xff<<16) | 0x3);
-    
-    //if(addr == 0x040000B8 || addr == 0x040000C4 || addr == 0x040000D0 || addr == 0x040000DC)
+    if(address == 0x040000B8
+    || address == 0x040000C4
+    || address == 0x040000D0
+    || address == 0x040000DC)
         DMARefresh();
-    //else if(addr >= 0x04000100 && addr <= 0x0400010F)
+    else if(address >= 0x04000100 && address <= 0x0400010F)
         TimerRefresh();
-    //else if(addr >= 0x04000200 && addr <= 0x04000804)
+    else if(address >= 0x04000200 && address <= 0x04000804)
         PSpecialRefresh();
 }
 

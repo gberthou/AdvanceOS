@@ -14,7 +14,7 @@
 extern void *periphdata;
 
 void PeripheralsInit(void);
-void PeripheralsRefresh(void);
+void PeripheralsRefresh(uint32_t address);
 
 #endif
 

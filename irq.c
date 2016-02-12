@@ -129,7 +129,7 @@ void __attribute__((naked)) DataHandler(void)
                         break;
                 }
                 
-                PeripheralsRefresh();
+                PeripheralsRefresh(faultAddress);
                 
                 // This code leaks support for store SP-relative (Thumb.11)
                 // and push/pop instructions (Thumb.14)
@@ -180,7 +180,7 @@ void __attribute__((naked)) DataHandler(void)
                     for(;;);
                 }
                 
-                PeripheralsRefresh();
+                PeripheralsRefresh(faultAddress);
                 
                 irqEndTicks = TimerGetTicks();
                 __asm__ volatile("pop {r0-r12, lr}");
