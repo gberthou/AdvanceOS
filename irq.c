@@ -22,6 +22,10 @@
                                                  "msr cpsr, r0\n"\
                                                  "ldmia r2, {r0, r1, r2}"\
                                                  )
+static uint32_t lastPeripheralAddress;
+static void *periphInstructionResumeAddress;
+static uint32_t periphInstructionContent;
+static uint32_t periphThumb;
 
 static uint32_t spsrDataHandler;
 static uint32_t lrToRestore;
@@ -42,8 +46,12 @@ static void __attribute__((naked)) onPeripheralWritten(void)
     
     __asm__ volatile("cps 0x17\n"
                      "push {r0-r12}");
-    PeripheralsRefresh();
-    PeripheralsResume();
+    PeripheralsRefresh(lastPeripheralAddress);
+    if(periphThumb) // Thumb mode was enabled
+        *(uint16_t*)periphInstructionResumeAddress = periphInstructionContent;
+    else
+        *(uint32_t*)periphInstructionResumeAddress = periphInstructionContent;
+    PeripheralsSetAccess(READONLY);
 
     RESTORE_FAULTING_MODE();
     __asm__ volatile("ldr lr, %0"
