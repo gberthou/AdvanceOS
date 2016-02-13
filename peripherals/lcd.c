@@ -86,11 +86,7 @@ static void clipAndPutPixel(uint32_t x, uint32_t y, uint32_t color)
 static void fillWithBackdropColor(void)
 {
     uint32_t color = palette2screen(*(volatile uint16_t*)GBA_BG_PALETTE);
-    uint32_t x;
-    uint32_t y;
-    for(y = 0; y < GBA_HEIGHT; ++y)
-        for(x = 0; x < GBA_WIDTH; ++x)
-            FBPutColor(x, y, color);
+    FBFillColor(color);
 }
 
 static void renderBg(unsigned int mode, unsigned int bg)
