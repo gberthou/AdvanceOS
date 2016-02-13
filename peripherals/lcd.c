@@ -153,6 +153,7 @@ void LCDUpdateScreen(void)
     unsigned int mode = dispcnt & 0x7;
 
     fillWithBackdropColor();
+
     for(bg = 0; bg < 4; ++bg)
     {
         if(dispcnt & (1 << (bg + 8))) // bg enabled

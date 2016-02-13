@@ -142,13 +142,6 @@ void FBCopyDoubleBuffer(void)
 
 void FBFillColor(uint32_t color)
 {
-    /*
-    uint32_t y = doubleFb.height;
-    while(y--)
-    {
-        DMAFill32(doubleFb.ptr + y * (doubleFb.pitch>>2), color, doubleFb.width);
-    }
-    */
     DMAFillFramebuffer(doubleFb.ptr, color);
 }
 

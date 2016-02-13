@@ -47,13 +47,16 @@ void DMACopy32(void *dst, void *src, size_t sizeBytes)
 void DMAFillFramebuffer(void *dst, uint32_t value)
 {
     static struct DMAControlBlock __attribute__((aligned(0x100))) controlBlock;
+    static uint32_t val;
+
+    val = value;
 
     controlBlock.transferInfo = (0 << 9)  // 32 bit source read
                               | (0 << 8)  // Do not increment source
                               | (0 << 5)  // 32 bit destination write
                               | (1 << 4)  // Increment destination
                               | (1 << 1); // Enable 2D mode
-    controlBlock.srcAddress = (uint32_t) &value;
+    controlBlock.srcAddress = (uint32_t) &val;
     controlBlock.dstAddress = (uint32_t) dst;
     controlBlock.transferLen = (240*4)      // Horizontal line size in bytes
                              | (159 << 16); // Number of horizontal lines
