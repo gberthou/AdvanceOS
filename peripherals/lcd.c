@@ -66,21 +66,22 @@ void LCDOnTick(uint32_t clock)
     }
 }
 
-static uint32_t palette2screen(uint16_t paletteColor)
+inline uint32_t palette2screen(uint16_t paletteColor)
 {
     // There is an additionnal left shift of 3 in order to
     // scale the input color in range 0-31 to 0-248
-    return 0x00000000
-         | ((paletteColor & 0x1F) << 3)         // R
-         | (((paletteColor >> 5) & 0x1F) << 11)  // G
-         | (((paletteColor >> 10) & 0x1F) << 19); // B
+    return  ((paletteColor & 0x1F) << 3)          // R
+          | ((paletteColor & (0x1F << 5)) << 6)   // G
+          | ((paletteColor & (0x1F << 10)) << 9); // B
 ;
 }
 
 static void clipAndPutPixel(uint32_t x, uint32_t y, uint32_t color)
 {
     if(x < GBA_WIDTH && y < GBA_HEIGHT)
+    {
         FBPutColor(x, y, color);
+    }
 }
 
 static void fillWithBackdropColor(void)
@@ -107,6 +108,9 @@ static void renderBg(unsigned int mode, unsigned int bg)
         {
             volatile uint8_t *tileData = (volatile uint8_t*) (GBA_VRAM_BEGIN + offsetTileData + ((*mapData) & 0x3FF) * 32);
             volatile uint16_t *palette = (volatile uint16_t*) (GBA_BG_PALETTE + ((*mapData) >> 12) * 32);
+            
+            uint32_t offsetX = (currentTile & 0x1F) << 3;
+            uint32_t offsetY = (currentTile >> 5) << 3;
             
             uint32_t x;
             uint32_t y;
@@ -136,8 +140,8 @@ static void renderBg(unsigned int mode, unsigned int bg)
                     color = palette[colorIndex];
 
                     if(color) // Color == 0 -> always transparent
-                        clipAndPutPixel(x - bgScrollX + (currentTile & 0x1F) * 8,
-                                        y - bgScrollY + (currentTile >> 5) * 8,
+                        clipAndPutPixel(x - bgScrollX + offsetX,
+                                        y - bgScrollY + offsetY,
                                         palette2screen(color));
                 }
             }
