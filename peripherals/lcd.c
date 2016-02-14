@@ -15,6 +15,9 @@
 
 #define LCD_VCOUNT (*PERIPH16(6))
 
+#define GBA_LCD_MODE5_WIDTH  160
+#define GBA_LCD_MODE5_HEIGHT 128
+
 static uint32_t lcdclock;
 
 void LCDInitClock(uint32_t clock)
@@ -175,6 +178,19 @@ static void renderBg(uint16_t dispcnt, unsigned int mode, unsigned int bg)
                 if(color)
                     FBPutColor(x, y, palette2screen(color));
             }
+    }
+    else if(mode == 5)
+    {
+        // Bit 4 of DISPCNT selects frame 
+        volatile uint16_t *ptr = (volatile uint16_t*)((dispcnt & (1 << 4)) ?
+                GBA_VRAM_BEGIN + 0x0000A000
+                : GBA_VRAM_BEGIN);
+        uint32_t x;
+        uint32_t y;
+
+        for(y = 0; y < GBA_LCD_MODE5_HEIGHT;  ++y)
+            for(x = 0; x < GBA_LCD_MODE5_WIDTH; ++x)
+                FBPutColor(x, y, palette2screen(*ptr++));
     }
 }
 
