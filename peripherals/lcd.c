@@ -3,10 +3,8 @@
 #include "../gba.h"
 #include "../timer.h"
 #include "../irq.h"
+#include "../gbaConstants.h"
 #include "peripherals.h"
-
-#define GBA_WIDTH 240
-#define GBA_HEIGHT 160
 
 #define GBA_VRAM_BEGIN  0x06000000
 #define GBA_BG_PALETTE  0x05000000
@@ -79,7 +77,7 @@ static uint32_t palette2screen(uint16_t paletteColor)
 
 static void clipAndPutPixel(uint32_t x, uint32_t y, uint32_t color)
 {
-    if(x < GBA_WIDTH && y < GBA_HEIGHT)
+    if(x < GBA_LCD_WIDTH && y < GBA_LCD_HEIGHT)
         FBPutColor(x, y, color);
 }
 
@@ -88,12 +86,12 @@ static void fillWithBackdropColor(void)
     uint32_t color = palette2screen(*(volatile uint16_t*)GBA_BG_PALETTE);
     uint32_t x;
     uint32_t y;
-    for(y = 0; y < GBA_HEIGHT; ++y)
-        for(x = 0; x < GBA_WIDTH; ++x)
+    for(y = 0; y < GBA_LCD_HEIGHT; ++y)
+        for(x = 0; x < GBA_LCD_WIDTH; ++x)
             FBPutColor(x, y, color);
 }
 
-static void renderBg(unsigned int mode, unsigned int bg)
+static void renderBg(uint16_t dispcnt, unsigned int mode, unsigned int bg)
 {
     if(mode == 0 || mode == 1)
     {
@@ -148,6 +146,36 @@ static void renderBg(unsigned int mode, unsigned int bg)
             ++mapData;
         }
     }
+    else if(mode == 3)
+    {
+        volatile uint16_t *ptr = (volatile uint16_t*)GBA_VRAM_BEGIN;
+        uint32_t x;
+        uint32_t y;
+
+        for(y = 0; y < GBA_LCD_HEIGHT;  ++y)
+            for(x = 0; x < GBA_LCD_WIDTH; ++x)
+                FBPutColor(x, y, palette2screen(*ptr++));
+    }
+    else if(mode == 4)
+    {
+        // Uses the whole BG Palette memory as a 256-colors palette
+       
+        // Bit 4 of DISPCNT selects frame 
+        volatile uint8_t *ptr = (volatile uint8_t*)((dispcnt & (1 << 4)) ?
+                    GBA_VRAM_BEGIN + 0x0000A000
+                    : GBA_VRAM_BEGIN);
+        volatile uint16_t *palette = (volatile uint16_t*) GBA_BG_PALETTE;
+        uint32_t x;
+        uint32_t y;
+
+        for(y = 0; y < GBA_LCD_HEIGHT; ++y)
+            for(x = 0; x < GBA_LCD_WIDTH; ++x)
+            {
+                uint16_t color = palette[*ptr++];
+                if(color)
+                    FBPutColor(x, y, palette2screen(color));
+            }
+    }
 }
 
 void LCDUpdateScreen(void)
@@ -161,7 +189,7 @@ void LCDUpdateScreen(void)
     {
         if(dispcnt & (1 << (bg + 8))) // bg enabled
         {
-            renderBg(mode, bg);
+            renderBg(dispcnt, mode, bg);
         }
     }
 }
