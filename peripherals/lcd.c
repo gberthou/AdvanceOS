@@ -6,9 +6,11 @@
 #include "../gbaConstants.h"
 #include "peripherals.h"
 
-#define GBA_VRAM_BEGIN  0x06000000
 #define GBA_BG_PALETTE  0x05000000
 #define GBA_OBJ_PALETTE 0x05000200
+#define GBA_VRAM_BEGIN  0x06000000
+#define GBA_TILES_OBJ_BEGIN  (GBA_VRAM_BEGIN + 0x10000)
+#define GBA_OBJS_BEGIN  0x07000000
 
 #define GBA_IE (*PERIPH16(0x200))
 #define GBA_IME (*PERIPH32(0x208))
@@ -18,7 +20,19 @@
 #define GBA_LCD_MODE5_WIDTH  160
 #define GBA_LCD_MODE5_HEIGHT 128
 
+#define GBA_OBJ_COUNT 128
+
+
+struct ObjAttributes
+{
+    uint16_t attr0;
+    uint16_t attr1;
+    uint16_t attr2;
+    uint16_t padding;
+};
+
 static uint32_t lcdclock;
+
 
 void LCDInitClock(uint32_t clock)
 {
@@ -27,6 +41,7 @@ void LCDInitClock(uint32_t clock)
 
 void LCDRefresh(void)
 {
+    register uint32_t spsr;
     ConsolePrint(31, 6, "mode:");
     ConsolePrintHex(37, 6, *PERIPH32(0));
 
@@ -38,13 +53,12 @@ void LCDRefresh(void)
     LCDUpdateScreen();
     FBCopyDoubleBuffer();
 
-    if(GBA_IME & 1)
+    __asm__ volatile("mrs %0, spsr" : "=r"(spsr));
+
+    if(!(spsr & (1 << 7)) && (GBA_IME & GBA_IE & 1)) // VBLANK
     {
-        if(GBA_IE & 1) // VBLANK
-        {
-            GBASetInterruptFlags(1);
-            GBACallIRQ();
-        }
+        GBASetInterruptFlags(1);
+        GBACallIRQ();
     }
 }
 
@@ -94,10 +108,36 @@ static void fillWithBackdropColor(void)
             FBPutColor(x, y, color);
 }
 
-static void renderBg(uint16_t dispcnt, unsigned int mode, unsigned int bg)
+static uint8_t getColorIndex4(const volatile uint8_t *tileData, uint8_t x, uint8_t y)
+{
+    // Structure of the data:
+    // RRRRLLLL
+    // R = pixel on the right
+    // L = pixel on the left
+    
+    uint8_t tmp = tileData[(x >> 1) + (y << 2)];
+    if(x & 1) // Pixel on the right
+        return (tmp >> 4);
+    return (tmp & 0xF);
+}
+
+static uint8_t getColorIndex8(const volatile uint8_t *tileData, uint8_t x, uint8_t y)
+{
+    return tileData[x + (y << 3)];
+}
+
+uint8_t (*const GET_COLOR_INDEX_FUNCTIONS[2])(const volatile uint8_t*, uint8_t, uint8_t) = {
+    getColorIndex4,
+    getColorIndex8
+};
+
+static void renderBg(uint16_t dispcnt, uint8_t mode, unsigned int bg)
 {
     if(mode == 0 || mode == 1)
     {
+        // TODO: Manage flip bits
+        // TODO 8bit depth support
+        
         uint16_t bgcnt = *PERIPH16(8 + bg * 2);
         uint32_t offsetTileData = 0x4000 * ((bgcnt >> 2) & 0x3);
         uint32_t offsetMapData = 0x800 * ((bgcnt >> 8) & 0x1F);
@@ -105,8 +145,21 @@ static void renderBg(uint16_t dispcnt, unsigned int mode, unsigned int bg)
         uint32_t currentTile;
         uint16_t bgScrollX = (*PERIPH16(0x10 + bg * 4)) & 0x1FF;
         uint16_t bgScrollY = (*PERIPH16(0x12 + bg * 4)) & 0x1FF;
+        
+        uint8_t (*getColorIndex)(const volatile uint8_t*, uint8_t, uint8_t);
+        uint8_t tileIncrement;
 
-        ConsolePrintHex(31, 10, bgScrollX);
+        // Loop invariant
+        if(bgcnt & (1 << 7)) // 8bit depth
+        {
+            getColorIndex = GET_COLOR_INDEX_FUNCTIONS[1];
+            tileIncrement = 64;
+        }
+        else // 4bit depth
+        {
+            getColorIndex = GET_COLOR_INDEX_FUNCTIONS[0];
+            tileIncrement = 32;
+        }
 
         for(currentTile = 0; currentTile < 32 * 32; ++currentTile)
         {
@@ -120,25 +173,8 @@ static void renderBg(uint16_t dispcnt, unsigned int mode, unsigned int bg)
             {
                 for(x = 0; x < 8; ++x)
                 {
-                    // TODO: Manage flip bits
-                    uint8_t colorIndex = *tileData;
-                    uint16_t color;
-
-                    // Structure of the data:
-                    // RRRRLLLL
-                    // R = pixel on the right
-                    // L = pixel on the left
-
-                    if(x & 1) // Pixel on the right
-                    {
-                        colorIndex >>=4;
-                        ++tileData; // Increase tile pointer only when the
-                                    // two corresponding pixels have been
-                                    // drawn (<=> when x is odd)
-                    }
-                    else // Pixel on the left
-                        colorIndex &= 0xF;
-                    color = palette[colorIndex];
+                    uint8_t colorIndex = getColorIndex(tileData, x, y);
+                    uint16_t color = palette[colorIndex];
 
                     if(color) // Color == 0 -> always transparent
                         clipAndPutPixel(x - bgScrollX + (currentTile & 0x1F) * 8,
@@ -146,6 +182,7 @@ static void renderBg(uint16_t dispcnt, unsigned int mode, unsigned int bg)
                                         palette2screen(color));
                 }
             }
+            tileData += tileIncrement;
             ++mapData;
         }
     }
@@ -194,19 +231,124 @@ static void renderBg(uint16_t dispcnt, unsigned int mode, unsigned int bg)
     }
 }
 
+static void renderObj(uint16_t dispcnt, uint8_t id)
+{
+    const volatile struct ObjAttributes *obj = ((const volatile struct ObjAttributes*) GBA_OBJS_BEGIN) + id;
+    
+    // Sprite sizes (to be combined with sprite shapes). Unit: tile
+    const uint8_t sizes0[] = {2, 4, 4, 8};
+    const uint8_t sizes1[] = {1, 1, 2, 4};
+
+    unsigned int rotationScaling = obj->attr0 & (1 << 8);
+
+    if(rotationScaling || !(obj->attr0 & (1 << 9))) // Check disable bit
+    {
+        // TODO: Rotation/scaling support
+        // TODO: OBJ mode support
+        // TODO: OBJ Mosaic support
+        // TODO: OBJ flip support
+        // TODO: Priority management
+
+        uint16_t objX = (obj->attr1 & 0x1FF);
+        uint16_t objY = (obj->attr0 & 0xFF);
+        uint16_t objW; // Unit: 8pixel-wide tile
+        uint16_t objH; // Same unit
+        uint8_t objShape = (obj->attr0 >> 14);
+        uint8_t objSize = (obj->attr1 >> 14);
+
+        // Bit 13 of attr0 controls whether the sprite has 256 palette
+        // colors (1) or 16 (0)
+        volatile uint16_t *palette = (volatile uint16_t*)
+                                     ((obj->attr0 & (1 << 13)) ? GBA_OBJ_PALETTE
+                                     : GBA_OBJ_PALETTE + ((obj->attr2 >> 12) << 5));
+        
+        volatile uint8_t *tileData = (volatile uint8_t*) (GBA_TILES_OBJ_BEGIN + ((obj->attr2 & 0x3FF) << 5));
+        
+        uint8_t (*getColorIndex)(const volatile uint8_t*, uint8_t, uint8_t);
+        uint8_t tileIncrement;
+        
+        if(obj->attr0 & (1 << 13)) // 8bit depth
+        {
+            getColorIndex = GET_COLOR_INDEX_FUNCTIONS[1];
+            tileIncrement = 64;
+        }
+        else // 4bit depth
+        {
+            getColorIndex = GET_COLOR_INDEX_FUNCTIONS[0];
+            tileIncrement = 32;
+        }
+        
+
+        // Sprite shape management
+        switch(objShape)
+        {
+            case 1: // Horizontal
+                objW = sizes0[objSize];
+                objH = sizes1[objSize];
+                break;
+            case 2: // Vertical
+                objW = sizes1[objSize];
+                objH = sizes0[objSize];
+                break;
+            default: // Square or prohibited
+                objW = (1 << objSize);
+                objH = objW;
+                break;
+        }
+
+        // Comparison is done before the loops because it is loop invariant
+        // However this solution makes binary size increase
+        if(dispcnt & (1 << 6)) // One dimensional character mapping
+        {
+            uint32_t tx;
+            uint32_t ty;
+            uint32_t x;
+            uint32_t y;
+            
+            for(ty = 0; ty < objH; ++ty)
+                for(tx = 0; tx < objW; ++tx)
+                {
+                    for(y = 0; y < 8; ++y)
+                    {
+                        for(x = 0; x < 8; ++x)
+                        {
+                            uint8_t colorIndex = getColorIndex(tileData, x, y);
+                            uint16_t color = palette[colorIndex];
+
+                            //if(color) // Color == 0 -> always transparent
+                                clipAndPutPixel(x + objX + (tx << 3),
+                                                y + objY + (ty << 3),
+                                                palette2screen(color));
+                        }
+                    }
+                    tileData += tileIncrement;
+                }
+        }
+        else // Two dimensional character mapping
+        {
+            // TODO
+        }
+    }
+}
+
 void LCDUpdateScreen(void)
 {
-    unsigned int bg;
+    unsigned int i;
     uint16_t dispcnt = *PERIPH16(0);
-    unsigned int mode = dispcnt & 0x7;
+    uint8_t mode = dispcnt & 0x7;
 
     fillWithBackdropColor();
-    for(bg = 0; bg < 4; ++bg)
+    for(i = 0; i < 4; ++i)
     {
-        if(dispcnt & (1 << (bg + 8))) // bg enabled
+        if(dispcnt & (1 << (i + 8))) // bg enabled
         {
-            renderBg(dispcnt, mode, bg);
+            renderBg(dispcnt, mode, i);
         }
+    }
+
+    for(i = 0; i < GBA_OBJ_COUNT; ++i)
+    {
+        renderObj(dispcnt, i);
     }
 }
 
