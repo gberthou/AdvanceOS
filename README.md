@@ -9,7 +9,7 @@ GBA has an ARM7TDMI processor and the processor of Raspberry Pi is ARM1176JZF-S.
 
 ## How to install and run
 ### Installation
-1. (Only if you want to debug/emulate the kernel on your computer)  Clone the following repo and build it to get a version of qemu that simulates Raspberry Pi: [Torlus/qemu.git](https://github.com/Torlus/qemu.git)
+1. (Only if you want to debug/emulate the kernel on your computer)  Clone the following repo, checkout rpi branch and build it to get a version of qemu that simulates Raspberry Pi: [gberthou/qemu](https://github.com/gberthou/qemu/tree/rpi). The repo is actually a fork of Torlus/qemu with support for DMA features that are used in this project
 2. (Only if you want to debug/emulate the kernel on your computer)  Append path to qemu/arm-softmmu to your PATH environment variable
 3. Clone this repo
 4. run `make build`
@@ -32,10 +32,15 @@ Currently, qemu and gdb communicate through port 2222. If you have another appli
   * Memory map to recreate the GBA memory environment
   * Traps on attempts to write to GBA peripherals memory
 2. GBA Peripherals
-  * LCD (background mode 0 only)
+  * LCD (backgrounds and sprites, no rotation/scaling)
   * Timers
   * DMA
   * IRQ management
+
+## Branch overview
+This repo contains several branches. Everything on master branch belongs to the current version of the project. Other branches show alternative experimental potential improvements:
+1. instructiondecoding: replaces the two-stage data fault handler with a lighter one-stage handler. It relies on assumptions about the faulting instructions (only STRx instructions should be used). System performance is better using this solution, but as it is not fully tested (user code might use hacks with stack pointer and STMx instructions that are not yet supported for example) it is not yet merged into master.
+2. fulldma: uses Raspberry Pi DMA to perform memory copies and fills to increase system performance, mainly in framebuffer operations.
 
 ## Additional informations
 GBA files that are located in the resource folder are compiled from the devkitARM [GBA examples](http://sourceforge.net/projects/devkitpro/files/examples/gba/). If you are interested in GBA development, there is more information about [how to setup devkitARM environment](http://devkitpro.org/wiki/Getting_Started/devkitARM).
