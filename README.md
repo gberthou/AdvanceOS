@@ -1,5 +1,5 @@
 # AdvanceOS
-A tiny Operating System that emulates GBA on Raspberry Pi
+A tiny Operating System that emulates GBA on Raspberry Pi.
 
 ## Principle
 GBA has an ARM7TDMI processor and the processor of Raspberry Pi is ARM1176JZF-S. The ARM7 instruction sets (ARM and thumb) are compatible with the ARM11 ones. Hence no instruction decoding is required to simulate the instructions sets. Special registers such as CPSR have the same bit fields so pre-editing the binaries to execute can be avoided.
@@ -39,6 +39,7 @@ Currently, qemu and gdb communicate through port 2222. If you have another appli
 
 ## Branch overview
 This repo contains several branches. Everything on master branch belongs to the current version of the project. Other branches show alternative experimental potential improvements:
+
 1. instructiondecoding: replaces the two-stage data fault handler with a lighter one-stage handler. It relies on assumptions about the faulting instructions (only STRx instructions should be used). System performance is better using this solution, but as it is not fully tested (user code might use hacks with stack pointer and STMx instructions that are not yet supported for example) it is not yet merged into master.
 2. fulldma: uses Raspberry Pi DMA to perform memory copies and fills to increase system performance, mainly in framebuffer operations.
 
