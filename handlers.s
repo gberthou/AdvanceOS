@@ -51,6 +51,7 @@ SwiHandler: b 0x8
 .global IRQHandler
 IRQHandler:
 	push {r0-r12, lr}
+    ;@bl USBCheckIRQ
 	bl TimerCheckIRQ
 	pop {r0-r12, lr}	
 	subs pc, lr, #4

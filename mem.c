@@ -1,24 +1,24 @@
+#include <sys/types.h>
+
 #include "mem.h"
 #include "linker.h"
+#include "errlog.h"
 
-// Heap size: 128 MB
-#define HEAP_SIZE (128 << 20)
-
-const uint8_t *heapHead = (uint8_t*) HEAP_BEGIN;
-static uint8_t *heap = (uint8_t*) HEAP_BEGIN;
+const uint8_t *gbaHeapHead = (uint8_t*) GBA_HEAP_BEGIN;
+static uint8_t *gbaHeap = (uint8_t*) GBA_HEAP_BEGIN;
 
 void *Memalloc(size_t sizeBytes, size_t align)
 {
     uint8_t *ret;
     --align;
-    ret = (uint8_t*) ((((uint32_t)heap) + align) & ~align);
+    ret = (uint8_t*) ((((uint32_t)gbaHeap) + align) & ~align);
 
-    if((uint32_t) ret >= HEAP_BEGIN + HEAP_SIZE - sizeBytes) // Out of heap :(
+    if((uint32_t) ret >= GBA_HEAP_BEGIN + GBA_HEAP_SIZE - sizeBytes) // Out of heap :(
     {
         for(;;);
     }
 
-    heap = ret + sizeBytes;
+    gbaHeap = ret + sizeBytes;
     return ret;
 }
 

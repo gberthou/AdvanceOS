@@ -23,7 +23,7 @@ struct DMAControlBlock
 static void DMALaunchRequest(uint8_t channel, const struct DMAControlBlock *controlBlock)
 {
     *(uint32_t*)DMA_ENABLE = 1; // Enable DMA channel 0
-    *DMA_PTR(channel, DMA_CONBLK_AD_OFFSET) = (uint32_t) controlBlock;
+    *DMA_PTR(channel, DMA_CONBLK_AD_OFFSET) = 0x40000000 | (uint32_t) controlBlock;
     *DMA_PTR(channel, DMA_CS_OFFSET) = 7; // Enables DMA transfer
 }
 
@@ -35,8 +35,8 @@ void DMACopy32(void *dst, void *src, size_t sizeBytes)
                               | (1 << 8)  // Increment source
                               | (0 << 5)  // 32 bit destination write
                               | (1 << 4); // Increment destination
-    controlBlock.srcAddress = (uint32_t) src;
-    controlBlock.dstAddress = (uint32_t) dst;
+    controlBlock.srcAddress = 0x40000000 | (uint32_t) src;
+    controlBlock.dstAddress = 0x40000000 | (uint32_t) dst;
     controlBlock.transferLen = sizeBytes;
     controlBlock.stride = 0;
     controlBlock.next = 0; // No chained operation

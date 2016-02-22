@@ -2,6 +2,9 @@
 
 #include <sys/types.h>
 
+#include <uspi.h>
+//#include <uspienv.h>
+
 #include "framebuffer.h"
 #include "console.h"
 #include "mmu.h"
@@ -9,15 +12,9 @@
 #include "peripherals/peripherals.h"
 #include "irq.h"
 #include "dma.h"
-
-void outputOK(void)
-{
-    volatile uint32_t *GPFSEL2 = (uint32_t*) 0x20200008;
-    uint32_t *GPSET0 = (uint32_t*) 0x2020001C;
-
-    *GPFSEL2 = (1 << 3);
-    *GPSET0 = (1 << 21);
-}
+#include "mailbox.h"
+#include "mem.h"
+#include "uspienv/uspienv.h"
 
 static void paintGreen(struct FBInfo *fb)
 {
@@ -39,18 +36,43 @@ static void paintSpecial(struct FBInfo *fb)
 
 int main(void)
 {
+    //USPiEnvInit(); 
+
     if(FBInit(240 * 2, 160))
     {
         struct FBInfo *fb;
+
         fb = FBCreateDoubleBuffer();
         paintGreen(fb);
+
+        ConsolePrint(0, 0, "USB init...         ");
+        FBCopyDoubleBuffer();
+       
+        /*
+        if(!USPiInitialize())
+        {
+            ConsolePrint(20, 1, "FAIL");
+            FBCopyDoubleBuffer();
+            //USPiEnvClose();
+            for(;;);
+        }
+        */
+        /*
         
+        ConsolePrint(20, 1, "OK");
+        FBCopyDoubleBuffer();
+       
+        int n = USPiGamePadAvailable();
+        ConsolePrintHex(0, 3, n);
+        FBCopyDoubleBuffer();
+        */
+
         PeripheralsInit();
         GBALoadComponents();
         FBConvertBufferToVirtualSpace();
         MMUInit();
-
         paintSpecial(fb);
+
         GBARun();
     }
 
