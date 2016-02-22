@@ -4,9 +4,9 @@
 #include <sys/types.h>
 
 //#define CLOCK_FREQ 700000000
-#define CLOCK_FREQabcd 1000000
-#define CLOCK_LCD (CLOCK_FREQabcd/13620)
-#define CLOCK_TIMER CLOCK_FREQabcd
+#define CLOCK_FREQ 1000000
+#define CLOCK_LCD (CLOCK_FREQ/13620)
+#define CLOCK_TIMER CLOCK_FREQ
 
 #define TMR_BASE 0x20003000
 #define TMR_CS  ((volatile uint32_t*)TMR_BASE)

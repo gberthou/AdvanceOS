@@ -10,14 +10,14 @@ INCDIR=-I"../uspi/include" #-I"../uspi_0.20/env/include"
 #LIBDIR=-L"../../../csud"
 #INCDIR=-I"../../../csud/include"
 
-#LIBS=-luspi
+LIBS=-luspi
 #LIBS=-lcsud
 
-CFLAGS=-g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -fno-stack-limit -mno-apcs-frame -nostartfiles -ffreestanding -march=armv6z -marm -mthumb-interwork -O6 #-mfloat-abi=hard
+CFLAGS=-g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -fno-stack-limit -mno-apcs-frame -nostartfiles -ffreestanding -march=armv6z -marm -mthumb-interwork -O6 -mfloat-abi=hard
 
 ASFLAGS=-march=armv6z
 
-LDFLAGS=-nostartfiles #-mfloat-abi=hard
+LDFLAGS=-nostartfiles -mfloat-abi=hard
 
 CFILES=$(wildcard *.c) $(wildcard peripherals/*.c) $(wildcard uspienv/*.c)
 ASFILES=$(wildcard *.s)

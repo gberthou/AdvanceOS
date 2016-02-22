@@ -3,7 +3,6 @@
 #include <sys/types.h>
 
 #include <uspi.h>
-//#include <uspienv.h>
 
 #include "framebuffer.h"
 #include "console.h"
@@ -15,6 +14,7 @@
 #include "mailbox.h"
 #include "mem.h"
 #include "uspienv/uspienv.h"
+#include "errlog.h"
 
 static void paintGreen(struct FBInfo *fb)
 {
@@ -36,7 +36,7 @@ static void paintSpecial(struct FBInfo *fb)
 
 int main(void)
 {
-    //USPiEnvInit(); 
+    USPiEnvInit(); 
 
     if(FBInit(240 * 2, 160))
     {
@@ -48,16 +48,8 @@ int main(void)
         ConsolePrint(0, 0, "USB init...         ");
         FBCopyDoubleBuffer();
        
-        /*
         if(!USPiInitialize())
-        {
-            ConsolePrint(20, 1, "FAIL");
-            FBCopyDoubleBuffer();
-            //USPiEnvClose();
-            for(;;);
-        }
-        */
-        /*
+            ErrorDisplayMessage("USPiInitiallize: cannot init USB");
         
         ConsolePrint(20, 1, "OK");
         FBCopyDoubleBuffer();
@@ -65,7 +57,6 @@ int main(void)
         int n = USPiGamePadAvailable();
         ConsolePrintHex(0, 3, n);
         FBCopyDoubleBuffer();
-        */
 
         PeripheralsInit();
         GBALoadComponents();

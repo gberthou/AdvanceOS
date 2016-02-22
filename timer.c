@@ -14,25 +14,26 @@
 #define IRQ_ENABLE1  ((uint32_t*)0x2000B210)
 #define IRQ_DISABLE1 ((uint32_t*)0x2000B21C)
 
-#define TIMER_LCD_CHAN 0
-#define TIMER_GBA_CHAN 1
-#define TIMER_USB_CHAN 2
+#define TIMER_LCD_CHAN 1
+//#define TIMER_GBA_CHAN 1
+#define TIMER_USB_CHAN 3
 
 #define TIMER_LCD_MASK (1 << TIMER_LCD_CHAN)
-#define TIMER_GBA_MASK (1 << TIMER_GBA_CHAN)
+//#define TIMER_GBA_MASK (1 << TIMER_GBA_CHAN)
 #define TIMER_USB_MASK (1 << TIMER_USB_CHAN)
 
 /* Timer mapping
- * Timer0: LCD
- * Timer1: GBA Timers
- * Timer2: USB
- * Timer3: Free
+ * Timer0: Reserved by GPU, cf.
+ * https://github.com/xinu-os/xinu/blob/master/system/platforms/arm-rpi/timer.c
+ * Timer1: LCD Timer
+ * Timer2: Reserved by GPU
+ * Timer3: USB Timer
  */
 
 void TimerInit(void)
 {
-    TMR_C[TIMER_LCD_CHAN] = *TMR_CLO + CLOCK_LCD;
-    TMR_C[TIMER_GBA_CHAN] = *TMR_CLO + CLOCK_TIMER;
+    *TMR_C1 = *TMR_CLO + CLOCK_LCD;
+    //TMR_C[TIMER_GBA_CHAN] = *TMR_CLO + CLOCK_TIMER;
     *TMR_CS |= TIMER_LCD_MASK /*| TIMER_GBA_MASK | TIMER_USB_MASK*/;
 
     LCDInitClock(*TMR_CLO);
@@ -62,7 +63,7 @@ void TimerCheckIRQ(void)
         LCDOnTick(*TMR_CLO);
 
         nextdeadline = *TMR_CLO + CLOCK_LCD;
-        TMR_C[TIMER_LCD_CHAN] = nextdeadline;
+        *TMR_C1 = nextdeadline;
         *TMR_CS = newcsValue;
     }
     
