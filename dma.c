@@ -23,6 +23,10 @@ struct DMAControlBlock
 static void DMALaunchRequest(uint8_t channel, const struct DMAControlBlock *controlBlock)
 {
     *(uint32_t*)DMA_ENABLE = 1; // Enable DMA channel 0
+    
+    // Wait for channel being inactive
+    while((*DMA_PTR(channel, DMA_CS_OFFSET)) & 1);
+    
     *DMA_PTR(channel, DMA_CONBLK_AD_OFFSET) = 0x40000000 | (uint32_t) controlBlock;
     *DMA_PTR(channel, DMA_CS_OFFSET) = 7; // Enables DMA transfer
 }

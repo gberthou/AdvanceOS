@@ -25,7 +25,7 @@ void ConnectInterrupt(unsigned int nIRQ,
     {
         handlerContainer.handler = handler;
         handlerContainer.param = param;
-        //USBEnableIRQ();
+        USBEnableIRQ();
     }
     else // Denied
     {
@@ -39,5 +39,7 @@ void RunUSBInterruptHandler(void)
     {
         (*handlerContainer.handler) (handlerContainer.param);
     }
+    else
+        ErrorDisplayMessage("Nope");
 }
 

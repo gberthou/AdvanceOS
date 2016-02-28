@@ -27,7 +27,7 @@ int SetPowerStateOn(unsigned int deviceId)
     if(MailboxReceive(8) == 0 || sequence[1] == 0x80000000) // Ok
     {
         const uint32_t *ptr = sequence + 2;
-        if(ptr[0] != 0x28001 // Unexpected tag
+        if(ptr[0] != TAG_SET_POWER_STATE // Unexpected tag
         || ptr[3] != 3       // Unexpected device id
         || (ptr[4] & 2))       // Device does not exist
             return 0;
@@ -69,6 +69,7 @@ int GetMACAddress(unsigned char buffer[6])
         
         for(i = 0; i < 6; ++i)
             buffer[i] = *ptr8++;
+        return 1;
     }
     return 0; // Mailbox failure
 }

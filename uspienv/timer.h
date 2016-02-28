@@ -4,5 +4,8 @@
 void USPiEnvTimerInit(void);
 void RunFirstUSBTimerHandler(void);
 
+void usDelay(unsigned int us);
+void MsDelay(unsigned int ms);
+
 #endif
 

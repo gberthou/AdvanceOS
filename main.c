@@ -15,6 +15,8 @@
 #include "mem.h"
 #include "uspienv/uspienv.h"
 #include "errlog.h"
+#include "linker.h"
+#include "uspienv/alloc.h"
 
 static void paintGreen(struct FBInfo *fb)
 {
@@ -34,6 +36,17 @@ static void paintSpecial(struct FBInfo *fb)
     FBCopyDoubleBuffer();
 }
 
+/*
+static void initVector(void)
+{
+    uint32_t *dst = 0;
+    const uint32_t *src = (const uint32_t*)VECTORTABLE_BEGIN;
+    unsigned int i = 8;
+    while(i--)
+        *dst++ = *src++;
+}
+*/
+
 int main(void)
 {
     USPiEnvInit(); 
@@ -45,23 +58,29 @@ int main(void)
         fb = FBCreateDoubleBuffer();
         paintGreen(fb);
 
-        ConsolePrint(0, 0, "USB init...         ");
-        FBCopyDoubleBuffer();
-       
-        if(!USPiInitialize())
-            ErrorDisplayMessage("USPiInitiallize: cannot init USB");
-        
-        ConsolePrint(20, 1, "OK");
-        FBCopyDoubleBuffer();
-       
-        int n = USPiGamePadAvailable();
-        ConsolePrintHex(0, 3, n);
-        FBCopyDoubleBuffer();
-
         PeripheralsInit();
         GBALoadComponents();
         FBConvertBufferToVirtualSpace();
         MMUInit();
+    
+        ConsolePrint(0, 0, "USB init...         ");
+        FBCopyDoubleBuffer();
+    
+        if(!USPiInitialize())
+            ErrorDisplayMessage("USPiInitialize: cannot init USB");
+
+        ConsolePrint(20, 0, "OK");
+        FBCopyDoubleBuffer();
+     
+        // TODO: Change this! 
+        for(;;)
+        {
+            int n = USPiGamePadAvailable();
+            ConsolePrintHex(0, 3, n);
+
+            FBCopyDoubleBuffer();
+        }
+        
         paintSpecial(fb);
 
         GBARun();

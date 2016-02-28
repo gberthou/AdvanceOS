@@ -1,7 +1,12 @@
-void LogWrite(const char *source, int severity, const char *message, ...)
+#include <uspios.h>
+#include "../errlog.h"
+
+void LogWrite(const char *source, unsigned int severity, const char *message, ...)
 {
     (void)source;
-    (void)severity;
-    (void)message;
+    if(severity == LOG_ERROR || severity == LOG_WARNING)
+    {
+        ErrorDisplayMessage(message);
+    }
 }
 

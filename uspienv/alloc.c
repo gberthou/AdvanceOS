@@ -1,163 +1,126 @@
-#include <sys/types.h>
+// Please see http://www.flipcode.com/archives/msys.c
 
-#include "../mem.h"
+#include "../mmu.h"
 #include "../linker.h"
-#include "../errlog.h"
+#include "../mem.h"
 
-// heap size: 64 MB
 #define HEAP_BEGIN (GBA_HEAP_BEGIN + GBA_HEAP_SIZE)
 #define HEAP_SIZE (64 << 20)
-#define MEMBLOCK_COUNT 1024
 
-struct MemBlock
+#define USED 1
+
+typedef struct {
+  unsigned size;
+} UNIT;
+
+typedef struct {
+  UNIT* free;
+  UNIT* heap;
+} MSYS;
+
+static MSYS msys;
+
+static UNIT* compact( UNIT *p, unsigned nsize )
 {
-    void *ptr;
-    size_t size;
-    struct MemBlock *next;
-};
+       unsigned bsize, psize;
+       UNIT *best;
 
-static struct MemBlock *freeblocks;      // List of free blocks
-static struct MemBlock *allocatedblocks; // List of allocated blocks
+       best = p;
+       bsize = 0;
 
-static struct MemBlock blockpool[MEMBLOCK_COUNT];
-static uint8_t blockavailable[MEMBLOCK_COUNT >> 3]; // 1 bit <-> 1 block, so it needs 8 times less cells
+       while( psize = p->size, psize )
+       {
+              if( psize & USED )
+              {
+                  if( bsize != 0 )
+                  {
+                      best->size = bsize;
+                      if( bsize >= nsize )
+                      {
+                          return best;
+                      }
+                  }
+                  bsize = 0;
+                  best = p = (UNIT *)( (unsigned)p + (psize & ~USED) );
+              }
+              else
+              {
+                  bsize += psize;
+                  p = (UNIT *)( (unsigned)p + psize );
+              }
+       }
 
-static struct MemBlock *allocMemBlock(void)
-{
-    size_t i;
-    for(i = 0; i < (MEMBLOCK_COUNT >> 3); ++i)
-    {
-        if(blockavailable[i] != 0xFF) // At least one block is available in this cell
-        {
-            size_t j;
-            for(j = 0; j < 8 && (blockavailable[i] & (1 << j)); ++j);
-            // The previous if statement ensures that 0 <= j <= 7
-            blockavailable[i] |= (1 << j);
-            return blockpool + (i << 3) + j;
-        }
-    }
-    return 0; // No available block
+       if( bsize != 0 )
+       {
+           best->size = bsize;
+           if( bsize >= nsize )
+           {
+               return best;
+           }
+       }
+
+       return 0;
 }
 
-/*
-static void freeMemBlock(const struct MemBlock *block)
+void free( void *ptr )
 {
-    size_t index = block - blockpool;
-    blockavailable[index >> 3] &= ~(1 << (index & 0x7));
+     if( ptr )
+     {
+         UNIT *p;
+
+         p = (UNIT *)( (unsigned)ptr - sizeof(UNIT) );
+         p->size &= ~USED;
+     }
 }
-*/
+
+void *malloc( unsigned size )
+{
+     unsigned fsize;
+     UNIT *p;
+
+     if( size == 0 ) return 0;
+
+     size  += 3 + sizeof(UNIT);
+     size >>= 2;
+     size <<= 2;
+
+     if( msys.free == 0 || size > msys.free->size )
+     {
+         msys.free = compact( msys.heap, size );
+         if( msys.free == 0 ) return 0;
+     }
+
+     p = msys.free;
+     fsize = msys.free->size;
+
+     if( fsize >= size + sizeof(UNIT) )
+     {
+         msys.free = (UNIT *)( (unsigned)p + size );
+         msys.free->size = fsize - size;
+     }
+     else
+     {
+         msys.free = 0;
+         size = fsize;
+     }
+
+     p->size = size | USED;
+
+     return (void *)( (unsigned)p + sizeof(UNIT) );
+}
 
 void USPiEnvAllocInit(void)
 {
-    size_t i;
+    msys.free = msys.heap = (UNIT *) HEAP_BEGIN;
+    msys.free->size = msys.heap->size = HEAP_SIZE - sizeof(UNIT);
+    *(unsigned *)((char *)HEAP_BEGIN + HEAP_SIZE - 4) = 0;
 
-    for(i = 0; i < (MEMBLOCK_COUNT >> 3); ++i)
-        blockavailable[i] = 0;
-
-    freeblocks = allocMemBlock();
-    if(freeblocks == 0)
-    {
-        ErrorDisplayMessage("MemInit: no free block");
-    }
-
-    freeblocks->ptr = (void*)HEAP_BEGIN;
-    freeblocks->size = HEAP_SIZE;
-    freeblocks->next = 0;
-
-    allocatedblocks = 0;
+    // Set adequate MMU entries so that the whole USPI heap is mapped
+    MMUPopulateRange(HEAP_BEGIN, HEAP_BEGIN, HEAP_SIZE, READWRITE);
 }
 
-static void insertAllocatedBlock(struct MemBlock *memblock)
+void MSYS_Compact( void )
 {
-    memblock->next = allocatedblocks;
-    allocatedblocks = memblock;
-}
-
-static void removeAllocatedBlock(struct MemBlock *memblock, struct MemBlock *prec)
-{
-    if(prec)
-        prec->next = memblock->next;
-    else
-        allocatedblocks = memblock->next;
-}
-
-static void insertFreeBlock(struct MemBlock *memblock)
-{
-    memblock->next = freeblocks;
-    freeblocks = allocatedblocks;
-}
-
-static void removeFreeBlock(struct MemBlock *memblock, struct MemBlock *prec)
-{
-    if(prec)
-        prec->next = memblock->next;
-    else
-        freeblocks = memblock->next;
-}
-
-void *malloc(size_t sizeBytes)
-{
-    struct MemBlock *memblock;
-    struct MemBlock *prec = 0;
-    for(memblock = freeblocks; memblock; prec = memblock, memblock = memblock->next)
-    {
-        if(memblock->size == sizeBytes) // Perfect fitting
-        {
-            void *ret = memblock->ptr;
-
-            removeFreeBlock(memblock, prec);
-
-            insertAllocatedBlock(memblock);
-            return ret;
-        }
-        if(memblock->size > sizeBytes) // Memory block cutting required
-        {
-            struct MemBlock *newblock = allocMemBlock();
-
-            if(!newblock)
-            {
-                ErrorDisplayMessage("malloc: no free block");
-            }
-            
-            newblock->ptr = memblock->ptr;
-            newblock->size = sizeBytes;
-            
-            memblock->ptr = (void*)(((uint32_t)memblock->ptr) + sizeBytes);
-            memblock->size -= sizeBytes;
-            
-            insertAllocatedBlock(newblock);
-
-            return newblock->ptr;
-        }
-    }
-    return 0;
-}
-
-void free(void *ptr)
-{
-    struct MemBlock *it = allocatedblocks;
-    struct MemBlock *prec = 0;
-    if(it)
-    {
-        while((ptr < it->ptr || (uint32_t)ptr >= (uint32_t)it->ptr + it->size) && it->next)
-        {
-            prec = it;
-            it = it->next;
-        }
-
-        if(ptr >= it->ptr && (uint32_t)ptr < (uint32_t)it->ptr + it->size)
-        {
-            removeAllocatedBlock(it, prec);
-            insertFreeBlock(it);
-        }
-        else // Not found
-        {
-            ErrorDisplayMessage("free: block not found");
-        }
-    }
-    else // There is no allocated block
-    {
-        ErrorDisplayMessage("free: calling free when nothing is allocated yet");
-    }
+     msys.free = compact( msys.heap, 0x7FFFFFFF );
 }
 
