@@ -4,9 +4,11 @@ BIN=kernel
 OBJDIR=obj
 DISASDIR=disas
 
+USPI_LIBFILE=uspi/lib/libuspi.a
+
 # Please set LIBDIR and INCDIR accordingly to your file organization
-LIBDIR=-L"../gberthouUspi/lib" 
-INCDIR=-I"../gberthouUspi/include" 
+LIBDIR=-L"uspi/lib" 
+INCDIR=-I"uspi/include" 
 
 LIBS=-luspi
 
@@ -29,7 +31,7 @@ $(OBJDIR)/%.o : %.s
 $(OBJDIR)/%.o : %.c
 	$(ARM)-gcc $(CFLAGS) $(INCDIR) -c $< -o $@
 
-default: $(LDSCRIPT) $(OBJS)
+default: $(LDSCRIPT) $(OBJS) $(USPI_LIBFILE)
 	echo $(OBJS)
 	$(ARM)-gcc $(LDFLAGS) $(OBJS) -o $(BIN).elf $(LIBDIR) $(LIBS) -T ldscript.l
 	$(ARM)-objcopy $(BIN).elf -O binary $(BIN).img
@@ -40,4 +42,7 @@ build:
 	mkdir -p $(OBJDIR) $(DISASDIR) $(OBJDIR)/peripherals $(OBJDIR)/uspienv
 
 clean:
-	rm -f $(OBJS)
+	rm -f $(OBJS) $(USPI_LIBFILE)
+
+$(USPI_LIBFILE):
+	cd uspi/lib && make clean && make

@@ -1,0 +1,5 @@
+This folder contains a modified version of USPi with support for XBox360 USB
+controller.
+
+Original USPi repo:                   https://github.com/rsta2/uspi
+Fork with XBox360 controller support: https://github.com/gberthou/uspi
