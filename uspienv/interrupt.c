@@ -1,4 +1,5 @@
 #include <uspios.h>
+#include <uspi/string.h>
 
 #include "../usb.h"
 #include "../errlog.h"
@@ -29,7 +30,7 @@ void ConnectInterrupt(unsigned int nIRQ,
     }
     else // Denied
     {
-        ErrorDisplayMessage("ConnectInterrupt: bad nIRQ");
+        ErrorDisplayMessage("ConnectInterrupt: bad nIRQ", 1);
     }
 }
 
@@ -40,6 +41,6 @@ void RunUSBInterruptHandler(void)
         (*handlerContainer.handler) (handlerContainer.param);
     }
     else
-        ErrorDisplayMessage("Nope");
+        USBDisableIRQ();
 }
 

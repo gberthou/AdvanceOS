@@ -1,10 +1,13 @@
 #include <sys/types.h>
 
+#include <uspi/string.h>
+
 #include "usb.h"
 #include "irq.h"
 #include "uspienv/interrupt.h"
 #include "errlog.h"
 #include "uspienv/timer.h"
+#include "console.h"
 
 #define IRQ_PENDING1  ((uint32_t*)0x2000B204)
 #define IRQ_ENABLE1   ((uint32_t*)0x2000B210)
@@ -17,15 +20,18 @@ void USBCheckIRQ(void)
     if(*IRQ_PENDING1 & (1 << USB_IRQ_NUMBER))
     {
         RunUSBInterruptHandler();
-        *IRQ_DISABLE1 |= (1 << USB_IRQ_NUMBER);
-        usDelay(64);
-        *IRQ_ENABLE1 |= (1 << USB_IRQ_NUMBER);
+        *IRQ_PENDING1 = (1 << USB_IRQ_NUMBER);
     }
 }
 
 void USBEnableIRQ(void)
 {
-    *IRQ_ENABLE1 |= (1 << USB_IRQ_NUMBER);
+    *IRQ_ENABLE1 = (1 << USB_IRQ_NUMBER);
     IRQEnable();
+}
+
+void USBDisableIRQ(void)
+{
+    *IRQ_DISABLE1 = (1 << USB_IRQ_NUMBER);
 }
 

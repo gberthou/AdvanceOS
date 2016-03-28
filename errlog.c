@@ -2,8 +2,9 @@
 
 #include "framebuffer.h"
 #include "console.h"
+#include "uspienv/timer.h"
 
-void ErrorDisplayMessage(const char *message)
+void ErrorDisplayMessage(const char *message, unsigned int blocking)
 {
     uint32_t x;
     uint32_t y;
@@ -15,6 +16,9 @@ void ErrorDisplayMessage(const char *message)
     ConsolePrint(1, 1, message);
     FBCopyDoubleBuffer();
 
-    for(;;);
+    if(blocking)
+        for(;;);
+    else
+        MsDelay(2500);
 }
 

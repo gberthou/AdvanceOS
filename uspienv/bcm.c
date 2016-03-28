@@ -46,8 +46,8 @@ int GetMACAddress(unsigned char buffer[6])
         
         // TAG 0
         TAG_GET_MAC_ADDRESS,
-        0, // size
-        0, // request
+        6, // size
+        6, // request
 
         0, // End TAG
         0,0 // Add 8 bytes to store the 6 bytes long MAC address
@@ -61,14 +61,14 @@ int GetMACAddress(unsigned char buffer[6])
     if(MailboxReceive(8) == 0 || sequence[1] == 0x80000000) // Ok
     {
         const uint32_t *ptr = sequence + 2;
-        const uint8_t *ptr8 = (uint8_t*)(ptr + 3);
+        const uint8_t *ptr8 = (uint8_t*)(sequence + 5);
         unsigned int i;
 
         if(ptr[0] != TAG_GET_MAC_ADDRESS) // Unexpected tag
             return 0;
         
         for(i = 0; i < 6; ++i)
-            buffer[i] = *ptr8++;
+            buffer[i] = ptr8[i];
         return 1;
     }
     return 0; // Mailbox failure

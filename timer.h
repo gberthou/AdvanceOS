@@ -5,7 +5,7 @@
 
 //#define CLOCK_FREQ 700000000
 #define CLOCK_FREQ 1000000
-#define CLOCK_LCD (CLOCK_FREQ/13620)
+#define CLOCK_LCD (CLOCK_FREQ/3420)
 #define CLOCK_TIMER CLOCK_FREQ
 
 #define TMR_BASE 0x20003000
@@ -13,6 +13,8 @@
 #define TMR_CLO (TMR_CS + 1)
 
 void TimerInit(void);
+
+void TimerEnableLCD(void);
 void TimerEnableUSB(uint32_t deadline);
 void TimerDisableUSB(void);
 void TimerCheckIRQ(void);

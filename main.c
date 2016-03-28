@@ -3,6 +3,9 @@
 #include <sys/types.h>
 
 #include <uspi.h>
+#include <uspios.h>
+#include <uspi/string.h>
+#include <uspi/usbxbox360.h>
 
 #include "framebuffer.h"
 #include "console.h"
@@ -17,6 +20,9 @@
 #include "errlog.h"
 #include "linker.h"
 #include "uspienv/alloc.h"
+#include "uspienv/logger.h"
+#include "usb.h"
+#include "timer.h"
 
 static void paintGreen(struct FBInfo *fb)
 {
@@ -36,20 +42,37 @@ static void paintSpecial(struct FBInfo *fb)
     FBCopyDoubleBuffer();
 }
 
-/*
-static void initVector(void)
+static void GamePadStatusHandler (unsigned int nDeviceIndex, const USPiGamePadState *pState)
 {
-    uint32_t *dst = 0;
-    const uint32_t *src = (const uint32_t*)VECTORTABLE_BEGIN;
-    unsigned int i = 8;
-    while(i--)
-        *dst++ = *src++;
+    (void)nDeviceIndex;
+
+    ConsolePrintHex(32, 18, pState->buttons);
+    ConsolePrintHex(32, 19, pState->axes[4].value);
 }
-*/
+
+static void USPiInit(void)
+{
+    ConsolePrint(0, 0, "USB init...         ");
+    FBCopyDoubleBuffer();
+
+    if(!USPiInitialize())
+        ErrorDisplayMessage("USPiInitialize: cannot init USB", 1);
+
+    ConsolePrint(20, 0, "OK");
+    FBCopyDoubleBuffer();
+
+    if(USPiGamePadAvailable())
+    {
+        USPiGamePadRegisterStatusHandler(GamePadStatusHandler);
+        IRQEnable();
+    }
+}
 
 int main(void)
 {
+    MemInit();
     USPiEnvInit(); 
+    TimerInit();
 
     if(FBInit(240 * 2, 160))
     {
@@ -62,33 +85,14 @@ int main(void)
         GBALoadComponents();
         FBConvertBufferToVirtualSpace();
         MMUInit();
-    
-        ConsolePrint(0, 0, "USB init...         ");
-        FBCopyDoubleBuffer();
-    
-        if(!USPiInitialize())
-            ErrorDisplayMessage("USPiInitialize: cannot init USB");
-
-        ConsolePrint(20, 0, "OK");
-        FBCopyDoubleBuffer();
-     
-        // TODO: Change this! 
-        for(;;)
-        {
-            int n = USPiGamePadAvailable();
-            ConsolePrintHex(0, 3, n);
-
-            FBCopyDoubleBuffer();
-        }
         
-        paintSpecial(fb);
+        USPiInit();
 
+        paintSpecial(fb);
         GBARun();
     }
 
-    for(;;)
-    {
-    }
+    for(;;);
 
     return 0;
 }

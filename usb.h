@@ -2,6 +2,7 @@
 #define USB_H
 
 void USBEnableIRQ(void);
+void USBDisableIRQ(void);
 
 #endif
 

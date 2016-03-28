@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <uspios.h>
+#include <uspi/string.h>
 
 #include "../timer.h"
 #include "../errlog.h"
@@ -26,6 +27,8 @@ static uint8_t timerblocksAvailable[TIMERBLOCK_COUNT >> 3];
 // Chained list of queued timer blocks, ordered by deadline
 // (list head = earliest deadline)
 static struct TimerBlock *queuedBlocks;
+
+void DelayLoop(unsigned int nCount);
 
 void USPiEnvTimerInit(void)
 {
@@ -56,7 +59,7 @@ static struct TimerBlock *allocateTimerBlock(void)
 static void freeTimerBlock(const struct TimerBlock *block)
 {
     size_t index = block - timerblocks;
-    timerblocksAvailable[index >> 3] &= ~(index & 0x7);
+    timerblocksAvailable[index >> 3] &= ~(1 << (index & 0x7));
 }
 
 static int compareTimerBlocks(const struct TimerBlock *a,
@@ -77,57 +80,42 @@ static int compareTimerBlocks(const struct TimerBlock *a,
 
 static void insertQueuedBlock(struct TimerBlock *block)
 {
-    struct TimerBlock *it;
-    struct TimerBlock *prec = 0;
-    for(it = queuedBlocks;
-        it && compareTimerBlocks(block, it) > 0;
-        prec = it, it = it->next);
-
-    if(it)
+    if(!queuedBlocks) // Queued blocks list was empty
     {
-        block->next = it->next;
-        it->next = block;
+        block->next = 0; // End of list
+        queuedBlocks = block;
     }
     else
     {
-        if(!queuedBlocks) // Queued blocks list was empty
+        struct TimerBlock *it;
+        struct TimerBlock *prec = 0;
+        for(it = queuedBlocks; it; prec = it, it = it->next)
         {
-            block->next = 0; // End of list
-            queuedBlocks = block;
+            if(compareTimerBlocks(block, it) <= 0)
+            {
+                block->next = it;
+                if(prec)
+                    prec->next = block;
+                else
+                    queuedBlocks = block;
+                return;
+            }
         }
-        else // Parameter block has either the smallest or the biggest deadline
+        
+        // Parameter block has either the smallest or the biggest deadline
+        if(prec) // Parameter block has the biggest deadline
         {
-            if(prec) // Parameter block has the biggest deadline
-            {
-                block->next = 0;
-                prec->next = block; // Insert block at the end of the list
-            }
-            else // Parameter block has the smallest deadline
-            {
-                block->next = queuedBlocks;
-                queuedBlocks = block; // Insert block at the beginning of the
-                                      // list
-            }
+            block->next = 0;
+            prec->next = block; // Insert block at the end of the list
+        }
+        else // Parameter block has the smallest deadline
+        {
+            block->next = queuedBlocks;
+            queuedBlocks = block; // Insert block at the beginning of the
+                                  // list
         }
     }
 }
-
-/*
-static void removeQueuedBlock(struct TimerBlock *block)
-{
-    struct TimerBlock *it;
-    struct TimerBlock *prec = 0;
-    for(it = queuedBlocks; it && it != block; prec = it, it = it->next);
-
-    if(it) // Block found
-    {
-        if(prec)
-            prec->next = block->next;
-        else // Block was the head of list
-            queuedBlocks = block->next;
-    }
-    // else: the block wasn't in the list. Should not happen
-}*/
 
 static void removeFirstQueuedBlock(void)
 {
@@ -137,17 +125,42 @@ static void removeFirstQueuedBlock(void)
 
 void usDelay(unsigned int us)
 {
-    uint32_t next = *TMR_CLO + us;
+    /*
+    uint32_t clo = *TMR_CLO;
+    uint32_t next = clo + us;
+
+    if(next < clo)
+        while(*TMR_CLO > next);
     while(*TMR_CLO < next);
+    */
+    /*
+    uint32_t next = *TMR_CLO+us;
+    while(*TMR_CLO < next);
+    */
+
+    DelayLoop(12 * us);
 }
 
 void MsDelay(unsigned int ms)
 {
-    uint32_t next = *TMR_CLO + ms * 1000;
+    /*
+    uint32_t clo = *TMR_CLO;
+    uint32_t next = clo + ms * 1000;
+
+    if(next < clo)
+        while(*TMR_CLO > next);
     while(*TMR_CLO < next);
+    */
+   
+    /* 
+    uint32_t next = *TMR_CLO+1000*ms;
+    while(*TMR_CLO < next);
+    */
+
+    DelayLoop(12500 * ms);
 }
 
-static void updateTimerUSB(void)
+static void updateUSBTimer(void)
 {
     if(queuedBlocks)
         TimerEnableUSB(queuedBlocks->deadline);
@@ -163,12 +176,22 @@ unsigned int StartKernelTimer(unsigned int nDelayUnits,
     uint32_t ticks = *TMR_CLO;
     struct TimerBlock *block = allocateTimerBlock();
 
+    /*
+    TString s;
+    String(&s);
+    StringFormat(&s, "delay: %d", nDelayUnits);
+    LogWrite("gamepad", LOG_ERROR, s.m_pBuffer);
+*/
+
     if(!block) // There is no available block
     {
-        ErrorDisplayMessage("StartKernelTimer: no available block");
+        ErrorDisplayMessage("StartKernelTimer: no available block", 1);
     }
 
-    block->deadline = ticks + nDelayUnits * TIME_RATIO;
+    if(nDelayUnits < 1000)
+        nDelayUnits = 1000;
+
+    block->deadline = ticks + nDelayUnits;
     block->overflowdeadline = (block->deadline < ticks);
     block->handler = handler;
     block->param = param;
@@ -176,9 +199,9 @@ unsigned int StartKernelTimer(unsigned int nDelayUnits,
     
     insertQueuedBlock(block);
 
-    updateTimerUSB();
+    updateUSBTimer();
 
-    return block - timerblocks;
+    return block - timerblocks + 1;
 }
 
 void CancelKernelTimer(unsigned int hTimer)
@@ -197,7 +220,7 @@ void CancelKernelTimer(unsigned int hTimer)
             return;
         }
     }
-    updateTimerUSB();
+    updateUSBTimer();
 }
 
 void RunFirstUSBTimerHandler(void)
@@ -211,19 +234,22 @@ void RunFirstUSBTimerHandler(void)
         for(it = queuedBlocks; it; it = it->next)
             it->overflowdeadline = 0;
     }
+    prevTicks = ticks;
 
     while(queuedBlocks && !queuedBlocks->overflowdeadline
-                       && queuedBlocks->deadline <= ticks) // Execute all the
-                                                           // late jobs
+                       && queuedBlocks->deadline <= *TMR_CLO) // Execute all the
+                                                              // late jobs
     {
         struct TimerBlock *block = queuedBlocks;
 
-        (*(block->handler)) (block - timerblocks, block->param, block->context);
+        // TODO: Check whether +1 is correct here
+        (*(block->handler)) (block - timerblocks + 1, block->param,
+                             block->context);
 
         removeFirstQueuedBlock();
         freeTimerBlock(block);
     }
     
-    updateTimerUSB();
+    updateUSBTimer();
 }
 

@@ -4,8 +4,12 @@
 #include "linker.h"
 #include "errlog.h"
 
-const uint8_t *gbaHeapHead = (uint8_t*) GBA_HEAP_BEGIN;
-static uint8_t *gbaHeap = (uint8_t*) GBA_HEAP_BEGIN;
+static uint8_t *gbaHeap;
+
+void MemInit(void)
+{
+    gbaHeap = (uint8_t*) GBA_HEAP_BEGIN;
+}
 
 void *Memalloc(size_t sizeBytes, size_t align)
 {
@@ -15,7 +19,7 @@ void *Memalloc(size_t sizeBytes, size_t align)
 
     if((uint32_t) ret >= GBA_HEAP_BEGIN + GBA_HEAP_SIZE - sizeBytes) // Out of heap :(
     {
-        for(;;);
+        ErrorDisplayMessage("Memalloc: Out of heap", 1);
     }
 
     gbaHeap = ret + sizeBytes;

@@ -5,19 +5,19 @@ OBJDIR=obj
 DISASDIR=disas
 
 # Please set LIBDIR and INCDIR accordingly to your file organization
-LIBDIR=-L"../uspi/lib" 
-INCDIR=-I"../uspi/include" 
+LIBDIR=-L"../gberthouUspi/lib" 
+INCDIR=-I"../gberthouUspi/include" 
 
 LIBS=-luspi
 
-CFLAGS=-g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -fno-stack-limit -mno-apcs-frame -nostartfiles -ffreestanding -march=armv6z -marm -mthumb-interwork -O6 -mfloat-abi=hard
+CFLAGS=-g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -fno-stack-limit -mno-apcs-frame -nostartfiles -ffreestanding -march=armv6z -marm -mthumb-interwork -O3 -mfloat-abi=hard
 
 ASFLAGS=-march=armv6z
 
 LDFLAGS=-nostartfiles -mfloat-abi=hard
 
 CFILES=$(wildcard *.c) $(wildcard peripherals/*.c) $(wildcard uspienv/*.c)
-ASFILES=$(wildcard *.s)
+ASFILES=$(wildcard *.s) $(wildcard uspienv/*.s)
 LDSCRIPT=ldscript.l
 
 OBJS=$(patsubst %.s,$(OBJDIR)/%.o,$(ASFILES))
