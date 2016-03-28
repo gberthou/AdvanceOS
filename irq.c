@@ -108,7 +108,8 @@ void __attribute__((naked)) DataHandler(void)
                             *PERIPH32(PERIPHERAL_OFFSET(faultAddress)) = registerValue;
                         break;
 
-                    case 0x6000: // STR, STRB imm. offset
+                    case 0x6000: // STR  imm. offset
+                    case 0x7000: // STRB imm. offset
                         SAVED_REGISTER_VALUE(instructionCode & 0x7, registerValue);
                         if(instructionCode & (1 << 12)) // STRB
                             *PERIPH8(PERIPHERAL_OFFSET(faultAddress)) = registerValue;
