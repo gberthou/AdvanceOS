@@ -69,11 +69,11 @@ void LCDOnTick(uint32_t clock)
     uint32_t ellapsedTime = clock - lcdclock;
     uint32_t ncycles = ellapsedTime / CLOCK_LCD;
 
-    vcount = ncycles % 228;
+    vcount = (ncycles % 57) << 2;
     
     LCD_VCOUNT = vcount;
-    if(vcount == 227 
-    || vcount < previousVcount) // Overflow: value 227 has been reached between
+    if(vcount == 0
+    || vcount < previousVcount) // Overflow: value has been reached between
                                 // two calls
     {
         LCDRefresh();

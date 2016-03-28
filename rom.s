@@ -1,3 +1,3 @@
 .section .text
-.incbin "resource/sprite256.gba"
+.incbin "resource/SimpleBGScroll_mb.gba"
 

@@ -2,6 +2,7 @@
 
 #include "mmu.h"
 #include "linker.h"
+//#include "mem.h"
 
 /* Please see
  * http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0301h/index.html
@@ -19,7 +20,7 @@
 static __attribute__((aligned(FIRST_LEVEL_ALIGN))) uint32_t firstEntries[FIRST_LEVEL_COUNT];
 static uint32_t secondEntries[SECOND_LEVEL_COUNT];
 
-static void enableMMU(void)
+void MMUEnable(void)
 {
     __asm__ volatile("mcr p15, 0, %0, c1, c0, 0\n" // Disable cache & MMU
                      "mcr p15, 0, r0, c8, c7, 0\n" // Invalidate Unified TLB entries 
@@ -98,16 +99,6 @@ void MMUPopulateRange(uint32_t vAddress, uint32_t pAddress, size_t size, enum Ac
     }
 }
 
-/*
- * Test purposes only
-uint32_t virt2Physical(uint32_t virt)
-{
-    uint32_t *sEntry = getSecondLevelEntry(virt);
-
-    return (*sEntry & 0xFFFFF000) | (virt & 0x00000FFF);
-}
-*/
-
 void MMUInit(void)
 {
     // First, make the kernel virtual addresses equal to the physical ones
@@ -126,6 +117,6 @@ void MMUInit(void)
     initTableBaseControlRegister();
     initTranslationTableBaseRegisters();
     initPermissions();
-    enableMMU();
+    MMUEnable();
 }
 

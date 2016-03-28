@@ -8,6 +8,7 @@
 #include "linker.h"
 #include "utils.h"
 #include "swifunctions.h"
+#include "sched.h"
 
 #define WRAM0_BEGIN 0x02000000
 #define WRAM0_SIZE 0x40000
@@ -31,21 +32,43 @@ void *wram1;
 
 static void patchBios(uint32_t *biosdata)
 {
-    uint32_t *swiVector = biosdata + (0x1c8 >> 2);
+    // Replace GBA SVC vector entry by System SVC vector entry
+    uint32_t *gbaSvcVector = biosdata + (0x1c8 >> 2);
+    
+    /* Patch custom bios functions */
     // Replace IntrWait (svc 0x04)
-    swiVector[4] = (uint32_t)SWI_IntrWait;
+    gbaSvcVector[4] = (uint32_t)SWI_IntrWait;
 
     // Replace VBlankIntrWait (svc 0x05)
-    swiVector[5] = (uint32_t)SWI_VBlankIntrWait;
-
+    gbaSvcVector[5] = (uint32_t)SWI_VBlankIntrWait;
 }
+
+#if 0
+static void copySvcVector(uint32_t *biosdata)
+{
+    extern uint32_t SystemSvcVector;
+    uint32_t *gbaSvcVector = biosdata + (0x1c8 >> 2);
+    uint32_t *dst = &SystemSvcVector;
+    size_t i;
+
+    for(i = 0; i < 0x2A; ++i)
+        dst[i] = gbaSvcVector[i];
+    
+    /* Patch custom bios functions */
+    // Replace IntrWait (svc 0x04)
+    dst[4] = (uint32_t)SWI_IntrWait;
+
+    // Replace VBlankIntrWait (svc 0x05)
+    dst[5] = (uint32_t)SWI_VBlankIntrWait;
+}
+#endif
 
 void GBALoadComponents(void)
 {
     unsigned int i;
 
     void *alignedGbaBios = Memalloc(GBA_BIOS_SIZE, 0x1000);
-    void *alignedGbaRom = Memalloc(GBA_ROM_SIZE, 0x1000);
+    //void *alignedGbaRom = Memalloc(GBA_ROM_SIZE, 0x1000);
 
     void *wram0       = Memcalloc(WRAM0_SIZE, 0x1000);
           wram1       = Memcalloc(WRAM1_SIZE, 0x1000);
@@ -55,17 +78,19 @@ void GBALoadComponents(void)
     void *sramGamePak = Memcalloc(SRAM_GAMEPAK_SIZE, 0x1000);
 
     Copy32(alignedGbaBios, (void*)GBABIOS_BEGIN, 0, 0, GBABIOS_END - GBABIOS_BEGIN);
-    Copy32(alignedGbaRom, (void*)GBAROM_BEGIN, 0, 0, GBAROM_END - GBAROM_BEGIN);
+    //Copy32(alignedGbaRom, (void*)GBAROM_BEGIN, 0, 0, GBAROM_END - GBAROM_BEGIN);
     
     // Code modifications
     patchBios(alignedGbaBios);
+    //copySvcVector(alignedGbaBios);
 
     // Map BIOS
     MMUPopulateRange(0x00000000, (uint32_t) alignedGbaBios, GBA_BIOS_SIZE, READWRITE);
     
     // Map ROM and its mirrors
     for(i = 0; i < 3; ++i)    
-        MMUPopulateRange(0x08000000 + i * 0x02000000, (uint32_t) alignedGbaRom, GBA_ROM_SIZE, READWRITE);
+        MMUPopulateRange(0x08000000 + i * 0x02000000, (uint32_t) GBAROM_BEGIN,
+                         GBA_ROM_SIZE, READWRITE);
     
     // Map GBA memories
     MMUPopulateRange(WRAM0_BEGIN, (uint32_t) wram0, WRAM0_SIZE, READWRITE);
@@ -82,7 +107,7 @@ void GBALoadComponents(void)
 
 void GBARun(void)
 {
-    TimerInit();
+    TimerEnableLCD();
     IRQEnable();
 
     __asm__ volatile("push {lr}\n"

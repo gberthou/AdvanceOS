@@ -1,33 +1,33 @@
 .section .text
 .global start
 start:
-	;@ Set interrupt vector base address to 0xFFFF0000
-	;@mrc p15, 0, r0, c1, c0, 0
-	;@orr r0, #0x2000 ;@ r0 |= (1 << 13) V bit
-	;@mcr p15, 0, r0, c1, c0, 0
-	
-	;@ Disable IRQ
-	;@mov r0, #0xC0
-	;@msr cpsr_c, r0
+    ;@ Set interrupt vector base address to 0xFFFF0000
+    ;@mrc p15, 0, r0, c1, c0, 0
+    ;@orr r0, #0x2000 ;@ r0 |= (1 << 13) V bit
+    ;@mcr p15, 0, r0, c1, c0, 0
+    
+    ;@ Disable IRQ
+    ;@mov r0, #0xC0
+    ;@msr cpsr_c, r0
 
-	;@ Init IRQ stack
-	cps #0x12
-	ldr sp, irqStack
+    ;@ Init IRQ stack
+    cps #0x12
+    ldr sp, irqStack
 
-	;@ Init Abort stack
-	cps #0x17
-	ldr sp, abortStack
+    ;@ Init Abort stack
+    cps #0x17
+    ldr sp, abortStack
 
-	;@ Init User stack
-	;@cps #0x10
-	;@ldr sp, usrStack
+    ;@ Init User stack
+    cps #0x1f
+    ldr sp, usrStack
 
-	;@ Init SVC stack
-	cps #0x13	
-	ldr sp, svcStack
+    ;@ Init SVC stack
+    cps #0x13    
+    ldr sp, svcStack
 
-	bl main ;@ Squadala!
-	b start
+    bl main ;@ Squadala!
+    b start
 
 .global __stack_begin
 __stack_begin:
@@ -50,10 +50,11 @@ SwiHandler: b 0x8
 
 .global IRQHandler
 IRQHandler:
-	push {r0-r12, lr}
-	bl TimerCheckIRQ
-	pop {r0-r12, lr}	
-	subs pc, lr, #4
+    push {r0-r12, lr}
+    bl USBCheckIRQ
+    bl TimerCheckIRQ
+    pop {r0-r12, lr}
+    subs pc, lr, #4
 
 .global FIQHandler
 FIQHandler: b FIQHandler

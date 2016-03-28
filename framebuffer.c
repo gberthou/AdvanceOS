@@ -108,16 +108,23 @@ void FBConvertBufferToVirtualSpace(void)
     size_t bufferSize = physicalFb.height * physicalFb.pitch;
     uint32_t *newPtr = Memalloc(bufferSize, 0x1000);
 
-    MMUPopulateRange((uint32_t) newPtr, (uint32_t) physicalFb.ptr, physicalFb.height * physicalFb.pitch, READWRITE);
+    newPtr = (uint32_t*) VirtualHeapAddressOf(newPtr);
+
+    MMUPopulateRange((uint32_t) newPtr, (uint32_t) physicalFb.ptr,
+                     physicalFb.height * physicalFb.pitch, READWRITE);
     physicalFb.ptr = newPtr;
+
+    doubleFb.ptr = (uint32_t*) VirtualHeapAddressOf(doubleFb.ptr);
 }
 
 struct FBInfo *FBCreateDoubleBuffer(void)
 {
     size_t bufferSize = physicalFb.height * physicalFb.pitch;
     uint32_t *doubleBuffer = Memalloc(bufferSize, 0x1000);
+    uint32_t VADoubleBuffer = VirtualHeapAddressOf(doubleBuffer);
 
-    MMUPopulateRange((uint32_t) doubleBuffer, (uint32_t) doubleBuffer, physicalFb.height * physicalFb.pitch, READWRITE);
+    MMUPopulateRange(VADoubleBuffer, (uint32_t) doubleBuffer,
+                     physicalFb.height * physicalFb.pitch, READWRITE);
     
     doubleFb.ptr    = doubleBuffer;
     doubleFb.width  = physicalFb.width;
@@ -130,7 +137,8 @@ void FBCopyDoubleBuffer(void)
 {
 #ifdef USE_DMA
     size_t bufferSize = (physicalFb.height * physicalFb.pitch); // Unit: bytes
-    DMACopy32(physicalBuffer, doubleFb.ptr, bufferSize);
+    DMACopy32(physicalBuffer, (uint32_t*)PhysicalHeapAddressOf(doubleFb.ptr),
+              bufferSize);
 #else
     size_t i = (physicalFb.height * physicalFb.pitch) >> 2; // Unit: 32bit words
     while(i--)

@@ -23,27 +23,6 @@ void PeripheralsInit(void)
         MMUPopulateRange(PERIPH_BASE + (i << 16), (uint32_t) periphdata, 0x1000, READONLY);
 }
 
-void PeripheralsSetAccess(enum AccessRights accessRights)
-{
-    __asm__ volatile("push {r0}\n"
-                     "mrc p15, 0, r0, c1, c0, 0\n"
-                     "bic r0, #0x1\n" // Disable MMU
-                     "mcr p15, 0, r0, c1, c0, 0\n"
-                     "mcr p15, 0, r0, c8, c7, 0\n" // Invalidate TLB entries
-                     "pop {r0}\n"
-                    );
-
-    MMUPopulateRange(PERIPH_BASE, (uint32_t) periphdata, PERIPH_SIZE, accessRights);
-
-    __asm__ volatile("push {r0}\n"
-                     "mrc p15, 0, r0, c1, c0, 0\n"
-                     "orr r0, #0x1\n" // Enable MMU
-                     "mcr p15, 0, r0, c1, c0, 0\n"
-                     "pop {r0}\n"
-                    );
-}
-
-
 void PeripheralsRefresh(uint32_t address)
 {
     if(address == 0x040000B8
