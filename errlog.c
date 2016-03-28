@@ -18,7 +18,9 @@ void ErrorDisplayMessage(const char *message, unsigned int blocking)
 
     if(blocking)
         for(;;);
+#ifndef NO_USB
     else
         MsDelay(2500);
+#endif
 }
 

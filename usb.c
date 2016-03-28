@@ -17,21 +17,27 @@
 
 void USBCheckIRQ(void)
 {
+#ifndef NO_USB
     if(*IRQ_PENDING1 & (1 << USB_IRQ_NUMBER))
     {
         RunUSBInterruptHandler();
         *IRQ_PENDING1 = (1 << USB_IRQ_NUMBER);
     }
+#endif
 }
 
 void USBEnableIRQ(void)
 {
+#ifndef NO_USB
     *IRQ_ENABLE1 = (1 << USB_IRQ_NUMBER);
     IRQEnable();
+#endif
 }
 
 void USBDisableIRQ(void)
 {
+#ifndef NO_USB
     *IRQ_DISABLE1 = (1 << USB_IRQ_NUMBER);
+#endif
 }
 

@@ -43,6 +43,7 @@ static void paintSpecial(struct FBInfo *fb)
     FBCopyDoubleBuffer();
 }
 
+#ifndef NO_USB
 static void GamePadStatusHandler (unsigned int nDeviceIndex, const USPiGamePadState *pState)
 {
     (void)nDeviceIndex;
@@ -68,11 +69,16 @@ static void USPiInit(void)
         IRQEnable();
     }
 }
+#endif
 
 int main(void)
 {
     MemInit();
-    USPiEnvInit(); 
+    
+#ifndef NO_USB
+    USPiEnvInit();
+#endif
+
     TimerInit();
 
     if(FBInit(240 * 2, 160))
@@ -86,8 +92,10 @@ int main(void)
         GBALoadComponents();
         FBConvertBufferToVirtualSpace();
         MMUInit();
-        
+   
+#ifndef NO_USB     
         USPiInit();
+#endif
 
         paintSpecial(fb);
         GBARun();

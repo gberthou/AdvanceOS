@@ -77,8 +77,10 @@ void TimerCheckIRQ(void)
 
         nextdeadline = *TMR_CLO + CLOCK_LCD;
         TMR_C[TIMER_LCD_CHAN] = nextdeadline;
-        
+       
+#ifndef NO_USB 
         RunFirstUSBTimerHandler();
+#endif
         newCsValue |= TIMER_LCD_MASK;
     }
     
@@ -98,11 +100,13 @@ void TimerCheckIRQ(void)
     }
     */
 
+#ifndef NO_USB
     if(csValue & TIMER_USB_MASK)
     {
         RunFirstUSBTimerHandler();
         newCsValue |= TIMER_USB_MASK;
     }
+#endif
 
     // Clear flags
     *TMR_CS = newCsValue;

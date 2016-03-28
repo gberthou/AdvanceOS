@@ -15,10 +15,16 @@ GBA has an ARM7TDMI processor and the processor of Raspberry Pi is ARM1176JZF-S.
 4. run `make build`
 
 ### Compiling the kernel
-run `make`
+
+#### Command to build a kernel that runs on Raspberry Pi
+Simply run `make`
+
+#### Command to build a kernel that is compatible with qemu
+The aforementionned version of qemu does not support USB features of BCM2835 so it is mandatory to disable USB in order to run the kernel on qemu.
+In order to compile that kernel version, run `make qemu-compatible DEFINES=-DNO_USB`
 
 ### Running the kernel on Raspberry Pi hardware
-Put the generated kernel.img into your SD card
+Put the generated kernel.img into your SD card.
 
 ### Debugging the kernel on the computer (requires qemu)
 1. Change directory to ./qemu
