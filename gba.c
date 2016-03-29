@@ -77,7 +77,7 @@ void GBALoadComponents(void)
     void *oam         = Memcalloc(OAM_SIZE, 0x1000);
     void *sramGamePak = Memcalloc(SRAM_GAMEPAK_SIZE, 0x1000);
 
-    Copy32(alignedGbaBios, (void*)GBABIOS_BEGIN, 0, 0, GBABIOS_END - GBABIOS_BEGIN);
+    Copy32(alignedGbaBios, (void*)GBABIOS_BEGIN, 0, 0, (GBABIOS_END - GBABIOS_BEGIN) >> 2);
     //Copy32(alignedGbaRom, (void*)GBAROM_BEGIN, 0, 0, GBAROM_END - GBAROM_BEGIN);
     
     // Code modifications

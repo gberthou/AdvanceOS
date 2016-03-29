@@ -4,6 +4,7 @@
 #include "../timer.h"
 #include "../irq.h"
 #include "../gbaConstants.h"
+#include "../errlog.h"
 #include "peripherals.h"
 
 #define GBA_BG_PALETTE  0x05000000
@@ -69,9 +70,17 @@ void LCDOnTick(uint32_t clock)
     uint32_t ellapsedTime = clock - lcdclock;
     uint32_t ncycles = ellapsedTime / CLOCK_LCD;
 
-    vcount = (ncycles % 57) << 2;
+    vcount = (ncycles % 57) << 2; // (1) Here vcount is a multiple of 4
+                                  // It enables the LCD clock to be 4 times
+                                  // slower
+    
+    // Hack: some binaries test (VCOUNT == 0x9f) which is not possible
+    // due to the fact our vcount is multiple of 4, cf. (1)
+    if(vcount == 0x9c)
+        vcount = 0x9f;
     
     LCD_VCOUNT = vcount;
+
     if(vcount == 0
     || vcount < previousVcount) // Overflow: value has been reached between
                                 // two calls
@@ -246,13 +255,12 @@ static void renderObj(uint16_t dispcnt, uint8_t id)
         // TODO: Rotation/scaling support
         // TODO: OBJ mode support
         // TODO: OBJ Mosaic support
-        // TODO: OBJ flip support
         // TODO: Priority management
 
         uint16_t objX = (obj->attr1 & 0x1FF);
         uint16_t objY = (obj->attr0 & 0xFF);
-        uint16_t objW; // Unit: 8pixel-wide tile
-        uint16_t objH; // Same unit
+        uint8_t objW; // Unit: 8pixel-wide tile
+        uint8_t objH; // Same unit
         uint8_t objShape = (obj->attr0 >> 14);
         uint8_t objSize = (obj->attr1 >> 14);
 
@@ -278,7 +286,6 @@ static void renderObj(uint16_t dispcnt, uint8_t id)
             tileIncrement = 32;
         }
         
-
         // Sprite shape management
         switch(objShape)
         {
@@ -300,19 +307,23 @@ static void renderObj(uint16_t dispcnt, uint8_t id)
         // However this solution makes binary size increase
         if(dispcnt & (1 << 6)) // One dimensional character mapping
         {
-            uint32_t tx;
-            uint32_t ty;
+            uint8_t tx;
+            uint8_t ty;
             uint32_t x;
             uint32_t y;
-            
+
             for(ty = 0; ty < objH; ++ty)
+            {
                 for(tx = 0; tx < objW; ++tx)
                 {
                     for(y = 0; y < 8; ++y)
                     {
                         for(x = 0; x < 8; ++x)
                         {
-                            uint8_t colorIndex = getColorIndex(tileData, x, y);
+                            // Takes flip attributes into account
+                            uint8_t colorIndex = getColorIndex(tileData,
+                                    (obj->attr1 & (1 << 12)) ? 7-x:x,
+                                    (obj->attr1 & (1 << 13)) ? 7-y:y);
                             uint16_t color = palette[colorIndex];
 
                             //if(color) // Color == 0 -> always transparent
@@ -323,10 +334,13 @@ static void renderObj(uint16_t dispcnt, uint8_t id)
                     }
                     tileData += tileIncrement;
                 }
+            }
         }
         else // Two dimensional character mapping
         {
             // TODO
+            ErrorDisplayMessage("renderObj: 2D character mapping not supported "
+                                "yet", 1);
         }
     }
 }

@@ -4,6 +4,7 @@
 #include "peripherals.h"
 #include "../utils.h"
 #include "../console.h"
+#include "../errlog.h"
 
 void DMARefreshChannel(unsigned int channel)
 {
@@ -16,13 +17,29 @@ void DMARefreshChannel(unsigned int channel)
         uint32_t startTiming = (control >> 28) & 3;
         if(startTiming == 0) // Start immediatly
         {
+            uint32_t transfersize;
+
+            if(channel == 3)
+            {
+                transfersize = (control & 0xFFFF) + 1;
+                if(transfersize <= 1)
+                    transfersize = 0x10000;
+            }
+            else
+            {
+                transfersize = (control & 0x3FFF) + 1;
+                if(transfersize <= 1)
+                    transfersize = 0x4000;
+            }
+
             if(control & (1 << 26)) // 32 bit transfer
-                Copy32((uint32_t*) base[1], (uint32_t*) base[0], (control >> 21) & 3, (control >> 23) & 3, control & 0xFFFF);
+                Copy32((uint32_t*) base[1], (uint32_t*) base[0], (control >> 21) & 3, (control >> 23) & 3, transfersize);
             else // 16 bit transfer
-                Copy16((uint16_t*) base[1], (uint16_t*) base[0], (control >> 21) & 3, (control >> 23) & 3, control & 0xFFFF);
+                Copy16((uint16_t*) base[1], (uint16_t*) base[0], (control >> 21) & 3, (control >> 23) & 3, transfersize);
         }
         else if(startTiming == 3) // Start special
         {
+            ErrorDisplayMessage("dma special", 1);
             if(channel == 1 || channel == 2) // Sound FIFO
             {
                 // Transfer 16 bytes while keeping dest address constant
@@ -30,12 +47,11 @@ void DMARefreshChannel(unsigned int channel)
             }
             else if(channel == 3) // Video capture
             {
-                ConsolePrint(31, 9, "DMA video capture transfer not implemented");
+                ErrorDisplayMessage("DMA video capture transfer not implemented", 1);
             }
             else
             {
-                ConsolePrint(31, 1, "DMA transfer prohibited (special on channel 0)");
-                for(;;);
+                ErrorDisplayMessage("DMA transfer prohibited (special on channel 0)", 1);
             }
         }
         else
@@ -44,6 +60,7 @@ void DMARefreshChannel(unsigned int channel)
             ConsolePrintHex(44, 9, channel);
             ConsolePrint(31, 10, "??? ");
             ConsolePrintHex(35, 10, (control >> 28) & 3);
+            for(;;);
         }
 
         if((control & (1 << 25)) == 0) // No repeat

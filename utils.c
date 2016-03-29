@@ -13,14 +13,13 @@ static int32_t increment(uint32_t code)
     }
 }
 
-void Copy32(uint32_t *dst, const uint32_t *src, uint32_t dstDecr, uint32_t srcDecr, size_t byteCount)
+void Copy32(uint32_t *dst, const uint32_t *src, uint32_t dstDecr, uint32_t srcDecr, size_t nUnits)
 {
     int32_t dstIncrement = increment(dstDecr);
     int32_t srcIncrement = increment(srcDecr);
 
     // TODO: Use DMA instead
-    byteCount >>= 2;
-    while(byteCount--)
+    while(nUnits--)
     {
         *dst = *src;
         dst += dstIncrement;
@@ -28,13 +27,12 @@ void Copy32(uint32_t *dst, const uint32_t *src, uint32_t dstDecr, uint32_t srcDe
     }
 }
 
-void Copy16(uint16_t *dst, const uint16_t *src, uint32_t dstDecr, uint32_t srcDecr, size_t byteCount)
+void Copy16(uint16_t *dst, const uint16_t *src, uint32_t dstDecr, uint32_t srcDecr, size_t nUnits)
 {
     int32_t dstIncrement = increment(dstDecr);
     int32_t srcIncrement = increment(srcDecr);
-
-    byteCount >>= 1;
-    while(byteCount--)
+    
+    while(nUnits--)
     {
         *dst = *src;
         dst += dstIncrement;
