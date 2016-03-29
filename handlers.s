@@ -50,6 +50,7 @@ SwiHandler: b 0x8
 
 .global IRQHandler
 IRQHandler:
+    ldr sp, irqStack
     push {r0-r12, lr}
     bl USBCheckIRQ
     bl TimerCheckIRQ
