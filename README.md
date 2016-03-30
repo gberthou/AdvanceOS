@@ -5,7 +5,9 @@ A tiny Operating System that emulates GBA on Raspberry Pi.
 GBA has an ARM7TDMI processor and the processor of Raspberry Pi is ARM1176JZF-S. The ARM7 instruction sets (ARM and thumb) are compatible with the ARM11 ones. Hence no instruction decoding is required to simulate the instructions sets. Special registers such as CPSR have the same bit fields so pre-editing the binaries to execute can be avoided.
 
 ## Preview
-![alt text](https://github.com/gberthou/AdvanceOS/blob/master/images/ansi_console.png "ansi_console demo")
+![Console demo](https://github.com/gberthou/AdvanceOS/blob/master/images/ansi_console.png "ansi_console demo")
+
+![Snake homebrew](https://github.com/gberthou/AdvanceOS/blob/master/images/snake.png "snake homebrew")
 
 ## How to install and run
 ### Installation
@@ -39,6 +41,7 @@ Currently, qemu and gdb communicate through port 2222. If you have another appli
   * Traps on attempts to write to GBA peripherals memory
 2. GBA Peripherals
   * LCD (backgrounds and sprites, no rotation/scaling)
+  * Keypad (user polling only)
   * Timers
   * DMA
   * IRQ management

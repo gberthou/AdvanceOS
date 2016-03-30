@@ -44,14 +44,6 @@ static void paintSpecial(struct FBInfo *fb)
 }
 
 #ifndef NO_USB
-static void GamePadStatusHandler (unsigned int nDeviceIndex, const USPiGamePadState *pState)
-{
-    (void)nDeviceIndex;
-
-    ConsolePrintHex(32, 18, pState->buttons);
-    ConsolePrintHex(32, 19, pState->axes[4].value);
-}
-
 static void USPiInit(void)
 {
     ConsolePrint(0, 0, "USB init...         ");
@@ -62,12 +54,6 @@ static void USPiInit(void)
 
     ConsolePrint(20, 0, "OK");
     FBCopyDoubleBuffer();
-
-    if(USPiGamePadAvailable())
-    {
-        USPiGamePadRegisterStatusHandler(GamePadStatusHandler);
-        IRQEnable();
-    }
 }
 #endif
 

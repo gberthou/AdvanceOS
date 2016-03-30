@@ -1,8 +1,6 @@
 #ifndef _usbxbox360_h
 #define _usbxbox360_h
 
-#include <uspi/types.h>
-
 #define XBOX360_BTN_A      0
 #define XBOX360_BTN_B      1
 #define XBOX360_BTN_X      2
@@ -30,6 +28,12 @@
 
 #define XBOX360_HAT 0
 
+#define XBOX360_HAT_UP    0
+#define XBOX360_HAT_DOWN  1
+#define XBOX360_HAT_LEFT  2
+#define XBOX360_HAT_RIGHT 3
+
+#define XBOX360_HATMASK(BTN) (1 << (XBOX360_HAT_ ## BTN))
 
 #endif
 

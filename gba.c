@@ -4,6 +4,7 @@
 #include "timer.h"
 #include "irq.h"
 #include "peripherals/peripherals.h"
+#include "peripherals/keypad.h"
 #include "mem.h"
 #include "linker.h"
 #include "utils.h"
@@ -107,6 +108,9 @@ void GBALoadComponents(void)
 
 void GBARun(void)
 {
+    KeypadInit();
+    KeypadReset();
+
     TimerEnableLCD();
     IRQEnable();
 

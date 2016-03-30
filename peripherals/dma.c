@@ -21,14 +21,14 @@ void DMARefreshChannel(unsigned int channel)
 
             if(channel == 3)
             {
-                transfersize = (control & 0xFFFF) + 1;
-                if(transfersize <= 1)
+                transfersize = (control & 0xFFFF);
+                if(!transfersize)
                     transfersize = 0x10000;
             }
             else
             {
-                transfersize = (control & 0x3FFF) + 1;
-                if(transfersize <= 1)
+                transfersize = (control & 0x3FFF);
+                if(!transfersize)
                     transfersize = 0x4000;
             }
 

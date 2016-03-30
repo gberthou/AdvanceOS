@@ -303,44 +303,40 @@ static void renderObj(uint16_t dispcnt, uint8_t id)
                 break;
         }
 
-        // Comparison is done before the loops because it is loop invariant
-        // However this solution makes binary size increase
-        if(dispcnt & (1 << 6)) // One dimensional character mapping
+        uint8_t tx;
+        uint8_t ty;
+        uint32_t x;
+        uint32_t y;
+        
+        for(ty = 0; ty < objH; ++ty)
         {
-            uint8_t tx;
-            uint8_t ty;
-            uint32_t x;
-            uint32_t y;
-
-            for(ty = 0; ty < objH; ++ty)
+            volatile uint8_t *prevTileData = tileData;
+            
+            for(tx = 0; tx < objW; ++tx)
             {
-                for(tx = 0; tx < objW; ++tx)
+                for(y = 0; y < 8; ++y)
                 {
-                    for(y = 0; y < 8; ++y)
+                    for(x = 0; x < 8; ++x)
                     {
-                        for(x = 0; x < 8; ++x)
-                        {
-                            // Takes flip attributes into account
-                            uint8_t colorIndex = getColorIndex(tileData,
-                                    (obj->attr1 & (1 << 12)) ? 7-x:x,
-                                    (obj->attr1 & (1 << 13)) ? 7-y:y);
-                            uint16_t color = palette[colorIndex];
+                        // Takes flip attributes into account
+                        uint8_t colorIndex = getColorIndex(tileData,
+                                (obj->attr1 & (1 << 12)) ? 7-x:x,
+                                (obj->attr1 & (1 << 13)) ? 7-y:y);
+                        uint16_t color = palette[colorIndex];
 
-                            //if(color) // Color == 0 -> always transparent
-                                clipAndPutPixel(x + objX + (tx << 3),
-                                                y + objY + (ty << 3),
-                                                palette2screen(color));
-                        }
+                        //if(color) // Color == 0 -> always transparent
+                            clipAndPutPixel(x + objX + (tx << 3),
+                                            y + objY + (ty << 3),
+                                            palette2screen(color));
                     }
-                    tileData += tileIncrement;
                 }
+                tileData += tileIncrement;
             }
-        }
-        else // Two dimensional character mapping
-        {
-            // TODO
-            ErrorDisplayMessage("renderObj: 2D character mapping not supported "
-                                "yet", 1);
+
+            if(!(dispcnt & (1 << 6))) // Two dimensional character mapping
+            {
+                tileData = prevTileData + (tileIncrement << 5);
+            }
         }
     }
 }
