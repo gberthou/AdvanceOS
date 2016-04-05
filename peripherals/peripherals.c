@@ -4,7 +4,6 @@
 #include "special.h"
 #include "../mem.h"
 
-#define PERIPH_BASE 0x04000000
 
 void *periphdata;
 

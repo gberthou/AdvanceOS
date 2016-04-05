@@ -37,7 +37,10 @@ svcStack:   .word 0x00007000
 usrStack:   .word 0x00007800
 
 .global PrefetchHandler
-PrefetchHandler: b PrefetchHandler
+PrefetchHandler:
+    mrs r0, spsr
+PH1:
+    b PH1
 
 .global UndefinedHandler
 UndefinedHandler: b UndefinedHandler
@@ -50,13 +53,33 @@ SwiHandler: b 0x8
 
 .global IRQHandler
 IRQHandler:
+    push {r0}
+    mrs r0, spsr
+    and r0, r0, #0x1f
+    cmp r0, #0x12
+IRQHandlerHold:
+    beq IRQHandlerHold
+
+    ldr r0, =irqsp
+    str sp, [r0]
+    mov r0, sp
     ldr sp, irqStack
     push {r0-r12, lr}
+    ldr r0, =irqlr
+    str lr, [r0]
     bl USBCheckIRQ
     bl TimerCheckIRQ
     pop {r0-r12, lr}
+    mov sp, r0
+    pop {r0}
     subs pc, lr, #4
 
 .global FIQHandler
 FIQHandler: b FIQHandler
+
+.global irqlr
+irqlr: .word 42
+
+.global irqsp
+irqsp: .word 43
 

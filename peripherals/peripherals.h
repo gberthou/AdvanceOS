@@ -5,6 +5,7 @@
 
 #include "../mmu.h"
 
+#define PERIPH_BASE 0x04000000
 #define PERIPH_SIZE 0x804
 
 #define PERIPH32(x) (((volatile uint32_t*)periphdata) + ((x) >> 2))

@@ -109,7 +109,7 @@ static void clipAndPutPixel(uint32_t x, uint32_t y, uint32_t color)
 
 static void fillWithBackdropColor(void)
 {
-    uint32_t color = palette2screen(*(volatile uint16_t*)GBA_BG_PALETTE);
+    uint32_t color = palette2screen(*(uint16_t*)GBA_BG_PALETTE);
     uint32_t x;
     uint32_t y;
     for(y = 0; y < GBA_LCD_HEIGHT; ++y)
@@ -117,7 +117,7 @@ static void fillWithBackdropColor(void)
             FBPutColor(x, y, color);
 }
 
-static uint8_t getColorIndex4(const volatile uint8_t *tileData, uint8_t x, uint8_t y)
+static uint8_t getColorIndex4(const uint8_t *tileData, uint8_t x, uint8_t y)
 {
     // Structure of the data:
     // RRRRLLLL
@@ -130,12 +130,12 @@ static uint8_t getColorIndex4(const volatile uint8_t *tileData, uint8_t x, uint8
     return (tmp & 0xF);
 }
 
-static uint8_t getColorIndex8(const volatile uint8_t *tileData, uint8_t x, uint8_t y)
+static uint8_t getColorIndex8(const uint8_t *tileData, uint8_t x, uint8_t y)
 {
     return tileData[x + (y << 3)];
 }
 
-uint8_t (*const GET_COLOR_INDEX_FUNCTIONS[2])(const volatile uint8_t*, uint8_t, uint8_t) = {
+uint8_t (*const GET_COLOR_INDEX_FUNCTIONS[2])(const uint8_t*, uint8_t, uint8_t) = {
     getColorIndex4,
     getColorIndex8
 };
@@ -150,12 +150,12 @@ static void renderBg(uint16_t dispcnt, uint8_t mode, unsigned int bg)
         uint16_t bgcnt = *PERIPH16(8 + bg * 2);
         uint32_t offsetTileData = 0x4000 * ((bgcnt >> 2) & 0x3);
         uint32_t offsetMapData = 0x800 * ((bgcnt >> 8) & 0x1F);
-        volatile uint16_t *mapData = (volatile uint16_t*) (GBA_VRAM_BEGIN + offsetMapData);
+        uint16_t *mapData = (uint16_t*) (GBA_VRAM_BEGIN + offsetMapData);
         uint32_t currentTile;
         uint16_t bgScrollX = (*PERIPH16(0x10 + bg * 4)) & 0x1FF;
         uint16_t bgScrollY = (*PERIPH16(0x12 + bg * 4)) & 0x1FF;
         
-        uint8_t (*getColorIndex)(const volatile uint8_t*, uint8_t, uint8_t);
+        uint8_t (*getColorIndex)(const uint8_t*, uint8_t, uint8_t);
         uint8_t tileIncrement;
 
         // Loop invariant
@@ -172,8 +172,8 @@ static void renderBg(uint16_t dispcnt, uint8_t mode, unsigned int bg)
 
         for(currentTile = 0; currentTile < 32 * 32; ++currentTile)
         {
-            volatile uint8_t *tileData = (volatile uint8_t*) (GBA_VRAM_BEGIN + offsetTileData + ((*mapData) & 0x3FF) * 32);
-            volatile uint16_t *palette = (volatile uint16_t*) (GBA_BG_PALETTE + ((*mapData) >> 12) * 32);
+            uint8_t *tileData = (uint8_t*) (GBA_VRAM_BEGIN + offsetTileData + ((*mapData) & 0x3FF) * 32);
+            uint16_t *palette = (uint16_t*) (GBA_BG_PALETTE + ((*mapData) >> 12) * 32);
             
             uint32_t x;
             uint32_t y;
@@ -197,7 +197,7 @@ static void renderBg(uint16_t dispcnt, uint8_t mode, unsigned int bg)
     }
     else if(mode == 3)
     {
-        volatile uint16_t *ptr = (volatile uint16_t*)GBA_VRAM_BEGIN;
+        uint16_t *ptr = (uint16_t*)GBA_VRAM_BEGIN;
         uint32_t x;
         uint32_t y;
 
@@ -210,10 +210,10 @@ static void renderBg(uint16_t dispcnt, uint8_t mode, unsigned int bg)
         // Uses the whole BG Palette memory as a 256-colors palette
        
         // Bit 4 of DISPCNT selects frame 
-        volatile uint8_t *ptr = (volatile uint8_t*)((dispcnt & (1 << 4)) ?
+        uint8_t *ptr = (uint8_t*)((dispcnt & (1 << 4)) ?
                     GBA_VRAM_BEGIN + 0x0000A000
                     : GBA_VRAM_BEGIN);
-        volatile uint16_t *palette = (volatile uint16_t*) GBA_BG_PALETTE;
+        uint16_t *palette = (uint16_t*) GBA_BG_PALETTE;
         uint32_t x;
         uint32_t y;
 
@@ -228,7 +228,7 @@ static void renderBg(uint16_t dispcnt, uint8_t mode, unsigned int bg)
     else if(mode == 5)
     {
         // Bit 4 of DISPCNT selects frame 
-        volatile uint16_t *ptr = (volatile uint16_t*)((dispcnt & (1 << 4)) ?
+        uint16_t *ptr = (uint16_t*)((dispcnt & (1 << 4)) ?
                 GBA_VRAM_BEGIN + 0x0000A000
                 : GBA_VRAM_BEGIN);
         uint32_t x;
@@ -242,7 +242,7 @@ static void renderBg(uint16_t dispcnt, uint8_t mode, unsigned int bg)
 
 static void renderObj(uint16_t dispcnt, uint8_t id)
 {
-    const volatile struct ObjAttributes *obj = ((const volatile struct ObjAttributes*) GBA_OBJS_BEGIN) + id;
+    const struct ObjAttributes *obj = ((const struct ObjAttributes*) GBA_OBJS_BEGIN) + id;
     
     // Sprite sizes (to be combined with sprite shapes). Unit: tile
     const uint8_t sizes0[] = {2, 4, 4, 8};
@@ -266,14 +266,19 @@ static void renderObj(uint16_t dispcnt, uint8_t id)
 
         // Bit 13 of attr0 controls whether the sprite has 256 palette
         // colors (1) or 16 (0)
-        volatile uint16_t *palette = (volatile uint16_t*)
+        uint16_t *palette = (uint16_t*)
                                      ((obj->attr0 & (1 << 13)) ? GBA_OBJ_PALETTE
                                      : GBA_OBJ_PALETTE + ((obj->attr2 >> 12) << 5));
         
-        volatile uint8_t *tileData = (volatile uint8_t*) (GBA_TILES_OBJ_BEGIN + ((obj->attr2 & 0x3FF) << 5));
+        uint8_t *tileData = (uint8_t*) (GBA_TILES_OBJ_BEGIN + ((obj->attr2 & 0x3FF) << 5));
         
-        uint8_t (*getColorIndex)(const volatile uint8_t*, uint8_t, uint8_t);
+        uint8_t (*getColorIndex)(const uint8_t*, uint8_t, uint8_t);
         uint8_t tileIncrement;
+        
+        uint8_t tx;
+        uint8_t ty;
+        uint32_t x;
+        uint32_t y;
         
         if(obj->attr0 & (1 << 13)) // 8bit depth
         {
@@ -303,14 +308,9 @@ static void renderObj(uint16_t dispcnt, uint8_t id)
                 break;
         }
 
-        uint8_t tx;
-        uint8_t ty;
-        uint32_t x;
-        uint32_t y;
-        
         for(ty = 0; ty < objH; ++ty)
         {
-            volatile uint8_t *prevTileData = tileData;
+            uint8_t *prevTileData = tileData;
             
             for(tx = 0; tx < objW; ++tx)
             {
@@ -324,7 +324,7 @@ static void renderObj(uint16_t dispcnt, uint8_t id)
                                 (obj->attr1 & (1 << 13)) ? 7-y:y);
                         uint16_t color = palette[colorIndex];
 
-                        //if(color) // Color == 0 -> always transparent
+                        if(color) // Color == 0 -> always transparent
                             clipAndPutPixel(x + objX + (tx << 3),
                                             y + objY + (ty << 3),
                                             palette2screen(color));
