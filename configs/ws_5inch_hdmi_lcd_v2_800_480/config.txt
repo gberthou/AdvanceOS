@@ -1,0 +1,7 @@
+hdmi_force_hotplug=1
+hdmi_pixel_encoding=0
+hdmi_drive=1
+config_hdmi_boost=11
+hdmi_group=2
+hdmi_mode=87
+hdmi_cvt=800 480 60 6 0 0 0
