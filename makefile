@@ -12,11 +12,11 @@ INCDIR=-I"uspi/include"
 
 LIBS_USPI=-luspi
 
-CFLAGS=-g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -fno-stack-limit -mno-apcs-frame -nostartfiles -ffreestanding -march=armv6z -marm -mthumb-interwork -O3 -mfloat-abi=hard
+CFLAGS=-g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -fno-stack-limit -mno-apcs-frame -nostartfiles -ffreestanding -march=armv6z -marm -mthumb-interwork -O3 
 
 ASFLAGS=-march=armv6z
 
-LDFLAGS=-nostartfiles -mfloat-abi=hard
+LDFLAGS=-nostartfiles
 
 DEFINES=
 

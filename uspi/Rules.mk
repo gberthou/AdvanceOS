@@ -34,9 +34,9 @@ LD	= $(PREFIX)ld
 AR	= $(PREFIX)ar
 
 ifeq ($(strip $(RASPPI)),1)
-ARCH	?= -march=armv6j -mtune=arm1176jzf-s -mfloat-abi=hard 
+ARCH	?= -march=armv6j -mtune=arm1176jzf-s 
 else
-ARCH	?= -march=armv7-a -mtune=cortex-a7 -mfloat-abi=hard
+ARCH	?= -march=armv7-a -mtune=cortex-a7
 endif
 
 AFLAGS	+= $(ARCH) -DRASPPI=$(RASPPI)
