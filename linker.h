@@ -1,7 +1,7 @@
 #ifndef LINKER_H
 #define LINKER_H
 
-#include <sys/types.h>
+#include <stdint.h>
 
 #define STACK_BEGIN ((uint32_t)__stack_begin)
 

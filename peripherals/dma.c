@@ -1,4 +1,5 @@
-#include <sys/types.h>
+#include <stdint.h>
+#include <stddef.h>
 
 #include "dma.h"
 #include "peripherals.h"

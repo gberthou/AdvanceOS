@@ -1,6 +1,5 @@
 #include <stdio.h>
-
-#include <sys/types.h>
+#include <stddef.h>
 
 #include <uspi.h>
 #include <uspios.h>

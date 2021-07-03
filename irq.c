@@ -1,4 +1,4 @@
-#include <sys/types.h>
+#include <stdint.h>
 
 #include "irq.h"
 #include "console.h"

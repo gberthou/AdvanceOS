@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 #include "console.h"
 #include "linker.h"
 

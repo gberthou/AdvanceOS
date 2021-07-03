@@ -1,7 +1,8 @@
 #ifndef MMU_H
 #define MMU_H
 
-#include <sys/types.h>
+#include <stdint.h>
+#include <stddef.h>
 
 enum AccessRights
 {

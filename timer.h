@@ -1,7 +1,7 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-#include <sys/types.h>
+#include <stdint.h>
 
 #define CLOCK_FREQ 1000000
 #define CLOCK_LCD (CLOCK_FREQ/3420)

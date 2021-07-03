@@ -1,7 +1,7 @@
 #ifndef FRAMEBUFFER_H
 #define FRAMEBUFFER_H
 
-#include <sys/types.h>
+#include <stdint.h>
 
 // Format: ARGB?
 

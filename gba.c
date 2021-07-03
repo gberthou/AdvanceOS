@@ -1,4 +1,4 @@
-#include <sys/types.h>
+#include <stdint.h>
 
 #include "gba.h"
 #include "timer.h"

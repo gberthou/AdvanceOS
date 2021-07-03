@@ -1,7 +1,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <sys/types.h>
+#include <stdint.h>
+#include <stddef.h>
 
 // Returns 1 if a and b have the same data (over byteCount bytes)
 //         0 otherwise

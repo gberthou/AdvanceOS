@@ -1,7 +1,7 @@
 #ifndef PERIPHERALS_H
 #define PERIPHERALS_H
 
-#include <sys/types.h>
+#include <stdint.h>
 
 #include "../mmu.h"
 

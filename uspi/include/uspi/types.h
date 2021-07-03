@@ -37,7 +37,7 @@ typedef int                 s32;
 typedef unsigned long	size_t;
 typedef long		ssize_t;
 #else
-#include <sys/types.h>
+#include <stdint.h>
 #include <stddef.h>
 
 typedef uint8_t  u8;

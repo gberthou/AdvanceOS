@@ -1,7 +1,7 @@
 #ifndef MEM_H
 #define MEM_H
 
-#include <sys/types.h>
+#include <stddef.h>
 
 #define GBA_HEAP_BEGIN_VIRTUAL 0x30000000
 #define VirtualHeapAddressOf(x) (((uint32_t)(x)) - GBA_HEAP_BEGIN \

@@ -1,7 +1,7 @@
 #ifndef CONSOLE_H
 #define CONSOLE_H
 
-#include <sys/types.h>
+#include <stdint.h>
 
 #include "framebuffer.h"
 
