@@ -1,0 +1,5 @@
+kernel.elf
+kernel.img
+disas/
+*.o
+*.a
