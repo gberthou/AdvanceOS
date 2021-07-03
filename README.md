@@ -11,22 +11,31 @@ GBA has an ARM7TDMI processor and the processor of Raspberry Pi is ARM1176JZF-S.
 
 ## How to install and run
 ### Installation
-1. (Only if you want to debug/emulate the kernel on your computer)  Clone the following repo, checkout rpi branch and build it to get a version of qemu that simulates Raspberry Pi: [gberthou/qemu](https://github.com/gberthou/qemu/tree/rpi). The repo is actually a fork of Torlus/qemu with support for DMA features that are used in this project
-2. (Only if you want to debug/emulate the kernel on your computer)  Append path to qemu/arm-softmmu to your PATH environment variable
-3. Clone this repo
-4. run `make build`
+1. Clone this repo
+2. run `make build`
 
 ### Compiling the kernel
 
 #### Command to build a kernel that runs on Raspberry Pi
 Simply run `make`
 
-#### Command to build a kernel that is compatible with qemu
+#### Command to build a kernel that is compatible with qemu [deprecated]
 The aforementionned version of qemu does not support USB features of BCM2835 so it is mandatory to disable USB.
 In order to compile that kernel version, run `make qemu-compatible DEFINES=-DNO_USB`
 
 ### Running the kernel on Raspberry Pi hardware
+#### Prepare the SD card
+If your SD card already contains a valid Raspberry Pi system, you can ignore this step.
+
+First, erase its partitions and create a one that supports vfat, for instance using `fdisk`.
+Then format it as vfat using `mkfs.vfat`.
+Clone the [officiel Raspberry Pi firmware](https://github.com/raspberrypi/firmware) somewhere into your *computer*, not on the SD card, and copy *only* the contents of the `boot` folder onto your partition.
+Finally, remove all `kernel*.img` from your SD card, and don't forget to create a `config.txt` adapted to your display.
+There is an example of `config.txt` file in the `configs` subdirectory of this repo.
+
+#### Copy the kernel image
 Put the generated kernel.img into your SD card.
+If your SD card has several partitions, choose the boot partition alongside Raspberry Pi's firmware files.
 
 ### Debugging the kernel on the computer (requires qemu)
 1. Change directory to ./qemu
